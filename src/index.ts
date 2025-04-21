@@ -31,32 +31,19 @@ export default {
       /* 页面加载淡入：保持 1 秒 */
       animation: fadein 1s ease-out;
       text-align: center;
-      gap: 0.8em; /* 调整元素间垂直间距 */
+      gap: 0.8em; /* 上下两行时间的间距 */
       overflow: hidden;
     }
 
-    /* 日期显示样式 */
-    .date-display {
-      font-size: 1.8vw; /* 比时间稍小 */
-      font-weight: 400;
-      color: rgba(255, 255, 255, 0.85); /* 稍暗以示区分 */
-      text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-    }
-
-    /* 时间显示样式 */
+    /* 恢复为只有一种时间显示样式 */
     .time-display {
       font-size: 2.2vw;
-      font-weight: 400;
+      font-weight: 400; /* 常规粗细 */
       color: white;
       text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
     }
 
     @media (prefers-color-scheme: light) {
-      /* 浅色模式下的样式 */
-      .date-display {
-        color: rgba(0, 0, 0, 0.75);
-        text-shadow: none;
-      }
       .time-display {
         color: #111;
         text-shadow: none;
@@ -65,11 +52,9 @@ export default {
 
     /* 响应式字体大小调整 */
     @media (max-width: 768px) {
-      .date-display { font-size: 3.5vw; }
       .time-display { font-size: 4.5vw; }
     }
     @media (max-width: 480px) {
-      .date-display { font-size: 4.5vw; }
       .time-display { font-size: 6vw; }
     }
 
@@ -105,35 +90,26 @@ export default {
   </script>
 </head>
 <body>
-  <div id="date-display" class="date-display">Loading Date…</div>
   <div id="time-utc" class="time-display">Loading UTC…</div>
   <div id="time-utc8" class="time-display">Loading UTC+8…</div>
 
   <script>
-    // --- Time Update Logic ---
+    // --- Time Update Logic (恢复为合并日期和时间) ---
     function updateTimes() {
         const now = new Date();
         // 定义日期和时间的格式化选项
-        const optDate = { year: 'numeric', month: '2-digit', day: '2-digit' };
-        const optTime = { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        const optDateTime = {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+        };
 
-        // 获取日期字符串 (使用 'en-GB' 保证 DD/MM/YYYY 格式, 时区用 UTC)
-        const commonDate = new Intl.DateTimeFormat('en-GB', { ...optDate, timeZone: 'UTC' }).format(now);
+        // 获取 UTC 日期和时间字符串
+        const utcString = new Intl.DateTimeFormat('en-GB', { ...optDateTime, timeZone: 'UTC' }).format(now) + ' (UTC+0)';
 
-        // 获取 UTC 时间字符串
-        const uT = new Intl.DateTimeFormat('en-GB', { ...optTime, timeZone: 'UTC' }).format(now);
-        const utcString = \`\${uT} (UTC+0)\`;
-
-        // 获取 UTC+8 时间字符串
-        const cT = new Intl.DateTimeFormat('en-GB', { ...optTime, timeZone: 'Asia/Shanghai' }).format(now);
-        const utc8String = \`\${cT} (UTC+8)\`;
+        // 获取 UTC+8 日期和时间字符串
+        const utc8String = new Intl.DateTimeFormat('en-GB', { ...optDateTime, timeZone: 'Asia/Shanghai' }).format(now) + ' (UTC+8)';
 
         // 更新对应的 HTML 元素
-        const dateElement = document.getElementById('date-display');
-        if (dateElement && dateElement.textContent !== commonDate) {
-             dateElement.textContent = commonDate;
-        }
-
         const timeUTCElement = document.getElementById('time-utc');
         if (timeUTCElement && timeUTCElement.textContent !== utcString) {
             timeUTCElement.textContent = utcString;
@@ -172,28 +148,25 @@ export default {
       const favicon = document.getElementById('favicon');
       if (favicon) favicon.href = c.toDataURL('image/x-icon');
 
-      // TODO: 在这里可以根据 hex 亮度调整 date-display 和 time-display 的颜色
+      // TODO: 在这里可以根据 hex 亮度调整 time-display 的颜色
     }
 
     // --- Scheduling Updates ---
     function scheduleTick(){
-      updateTimes(); // 立即更新一次时间显示
+      updateTimes();
       const now=new Date();
-      // 校准到下一秒的开始，使更新更精确
       const delay=1000-now.getMilliseconds();
       setTimeout(()=>{
-        // 每 5 秒的整数倍秒时更换颜色
         if(new Date().getSeconds()%5===0) setColor(randomColor());
-        scheduleTick(); // 安排下一次更新
+        scheduleTick();
       },delay);
     }
 
     // --- Initial Setup and Event Listener ---
     (() => {
-      updateTimes(); // 初始化时间显示
-      setColor(randomColor()); // 初始化背景色
-      scheduleTick(); // 启动定时更新
-      // 点击页面更换背景色
+      updateTimes();
+      setColor(randomColor());
+      scheduleTick();
       document.body.addEventListener('click',()=>setColor(randomColor()));
     })();
   </script>
