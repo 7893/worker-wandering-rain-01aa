@@ -39,18 +39,38 @@ export default {
       text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
     }
 
+    /* 新增：时间戳显示样式 */
+    .timestamp-display {
+      position: fixed; /* 固定在视口位置 */
+      bottom: 1em;     /* 距离底部 1em */
+      right: 1.5em;    /* 距离右侧 1.5em */
+      font-size: 1.6vw; /* 字体大小 */
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.7); /* 半透明白色 */
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+
     @media (prefers-color-scheme: light) {
       .time-display {
         color: #111;
         text-shadow: none;
       }
+      /* 新增：浅色模式下的时间戳样式 */
+      .timestamp-display {
+        color: rgba(0, 0, 0, 0.6);
+        text-shadow: none;
+      }
     }
 
+    /* 响应式字体大小调整 */
     @media (max-width: 768px) {
       .time-display { font-size: 4.5vw; }
+      .timestamp-display { font-size: 2.5vw; } /* 调整时间戳大小 */
     }
     @media (max-width: 480px) {
       .time-display { font-size: 6vw; }
+      .timestamp-display { font-size: 3.5vw; } /* 调整时间戳大小 */
     }
 
     @keyframes fadein {
@@ -88,8 +108,10 @@ export default {
   <div id="time-utc" class="time-display">Loading UTC…</div>
   <div id="time-utc8" class="time-display">Loading UTC+8…</div>
 
+  <div id="linux-timestamp" class="timestamp-display">Loading Timestamp…</div>
+
   <script>
-    // --- Time Update Logic (使用 + 拼接字符串，尝试解决构建错误) ---
+    // --- Time Update Logic ---
     function updateTimes() {
         const now = new Date();
         const optDate = { year: 'numeric', month: '2-digit', day: '2-digit' };
@@ -98,16 +120,18 @@ export default {
         // --- UTC ---
         const uD = new Intl.DateTimeFormat('en-US', { ...optDate, timeZone: 'UTC' }).format(now);
         const uT = new Intl.DateTimeFormat('en-GB', { ...optTime, timeZone: 'UTC' }).format(now);
-        // 使用 + 拼接
         const utcString = uD + ' ' + uT + ' (UTC+0)';
 
         // --- UTC+8 ---
         const cD = new Intl.DateTimeFormat('en-US', { ...optDate, timeZone: 'Asia/Shanghai' }).format(now);
         const cT = new Intl.DateTimeFormat('en-GB', { ...optTime, timeZone: 'Asia/Shanghai' }).format(now);
-         // 使用 + 拼接
         const utc8String = cD + ' ' + cT + ' (UTC+8)';
 
-        // 更新元素...
+        // --- Linux Timestamp ---
+        // 计算 Unix 时间戳 (秒)
+        const linuxTimestamp = Math.floor(now.getTime() / 1000);
+
+        // --- Update Elements ---
         const timeUTCElement = document.getElementById('time-utc');
         if (timeUTCElement && timeUTCElement.textContent !== utcString) {
             timeUTCElement.textContent = utcString;
@@ -116,6 +140,12 @@ export default {
         const timeUTC8Element = document.getElementById('time-utc8');
         if (timeUTC8Element && timeUTC8Element.textContent !== utc8String) {
             timeUTC8Element.textContent = utc8String;
+        }
+
+        const timestampElement = document.getElementById('linux-timestamp');
+        // 时间戳每秒都变，直接更新即可
+        if (timestampElement) {
+            timestampElement.textContent = linuxTimestamp;
         }
     }
 
@@ -146,12 +176,12 @@ export default {
       const favicon = document.getElementById('favicon');
       if (favicon) favicon.href = c.toDataURL('image/x-icon');
 
-      // TODO: 在这里可以根据 hex 亮度调整 time-display 的颜色
+      // TODO: 在这里可以根据 hex 亮度调整 .time-display 和 .timestamp-display 的颜色
     }
 
     // --- Scheduling Updates ---
     function scheduleTick(){
-      updateTimes();
+      updateTimes(); // 更新所有时间显示
       const now=new Date();
       const delay=1000-now.getMilliseconds();
       setTimeout(()=>{
