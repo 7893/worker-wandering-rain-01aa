@@ -123,9 +123,7 @@ export default {
 
     // --- Apply Color to Background and Favicon ---
     function setColor(hex){
-      // Note: We are setting the background color directly on the body.
-      // The CSS rule `background-color: var(--initial - bg, #000); ` handles the initial load color.
-      // Subsequent calls to setColor directly modify body's background.
+      // --- 注释已移除以修复构建错误 ---
       document.body.style.backgroundColor=hex;
       document.title=hex;
       const c=document.createElement('canvas'); c.width=c.height=16;
@@ -147,10 +145,7 @@ export default {
     // --- Initial Setup and Event Listener ---
     (() => {
       updateTimes(); // Initial time update
-      // Initial color is set via CSS variable '--initial-bg' which is set in the first script block.
-      // We call setColor here again to immediately apply a random color using the JS function,
-      // otherwise it would wait up to 5 seconds for the first change.
-      setColor(randomColor());
+      setColor(randomColor()); // Apply an initial random color via JS
       scheduleTick(); // Start the update loop
       document.body.addEventListener('click',()=>setColor(randomColor())); // Click to change color
     })();
