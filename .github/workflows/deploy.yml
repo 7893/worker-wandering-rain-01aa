@@ -24,11 +24,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install Wrangler CLI
-        run: pnpm add -g wrangler@latest
-
+      # 这里不再安装 wrangler，全项目统一使用本地依赖中已安装的 wrangler
       - name: Deploy to Cloudflare Workers
-        run: wrangler deploy
+        run: pnpm wrangler deploy
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
