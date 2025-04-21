@@ -19,26 +19,22 @@ export default {
       padding: 0;
       height: 100%;
       width: 100%;
-      /* 使用系统等宽字体栈 */
       font-family: Menlo, Monaco, Consolas, 'Courier New', 'Roboto Mono', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Mono', monospace;
       background-color: var(--initial-bg, #000);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      /* 背景色过渡：0.8 秒，ease-out 效果 */
       transition: background-color 0.8s ease-out;
-      /* 页面加载淡入：保持 1 秒 */
       animation: fadein 1s ease-out;
       text-align: center;
-      gap: 0.8em; /* 上下两行时间的间距 */
+      gap: 0.8em;
       overflow: hidden;
     }
 
-    /* 恢复为只有一种时间显示样式 */
     .time-display {
       font-size: 2.2vw;
-      font-weight: 400; /* 常规粗细 */
+      font-weight: 400;
       color: white;
       text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
     }
@@ -50,7 +46,6 @@ export default {
       }
     }
 
-    /* 响应式字体大小调整 */
     @media (max-width: 768px) {
       .time-display { font-size: 4.5vw; }
     }
@@ -94,20 +89,28 @@ export default {
   <div id="time-utc8" class="time-display">Loading UTC+8…</div>
 
   <script>
-    // --- Time Update Logic (恢复为合并日期和时间) ---
+    // --- Time Update Logic (使用 MM/DD/YYYY 日期格式) ---
     function updateTimes() {
         const now = new Date();
-        // 定义日期和时间的格式化选项
-        const optDateTime = {
-            year: 'numeric', month: '2-digit', day: '2-digit',
-            hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
-        };
+        // 分开定义日期和时间的格式化选项
+        const optDate = { year: 'numeric', month: '2-digit', day: '2-digit' };
+        const optTime = { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
 
-        // 获取 UTC 日期和时间字符串
-        const utcString = new Intl.DateTimeFormat('en-GB', { ...optDateTime, timeZone: 'UTC' }).format(now) + ' (UTC+0)';
+        // --- UTC ---
+        // 使用 'en-US' 区域设置来获取 MM/DD/YYYY 格式的日期
+        const uD = new Intl.DateTimeFormat('en-US', { ...optDate, timeZone: 'UTC' }).format(now);
+        // 单独格式化 UTC 时间 (locale 对 HH:MM:SS 格式影响不大, 继续用 en-GB 或 en-US 均可)
+        const uT = new Intl.DateTimeFormat('en-GB', { ...optTime, timeZone: 'UTC' }).format(now);
+        // 手动用空格拼接日期和时间
+        const utcString = `${ uD } ${ uT } (UTC + 0)`;
 
-        // 获取 UTC+8 日期和时间字符串
-        const utc8String = new Intl.DateTimeFormat('en-GB', { ...optDateTime, timeZone: 'Asia/Shanghai' }).format(now) + ' (UTC+8)';
+        // --- UTC+8 ---
+         // 使用 'en-US' 区域设置来获取 MM/DD/YYYY 格式的日期
+        const cD = new Intl.DateTimeFormat('en-US', { ...optDate, timeZone: 'Asia/Shanghai' }).format(now);
+        // 单独格式化 UTC+8 时间
+        const cT = new Intl.DateTimeFormat('en-GB', { ...optTime, timeZone: 'Asia/Shanghai' }).format(now);
+        // 手动用空格拼接日期和时间
+        const utc8String = `${ cD } ${ cT } (UTC + 8)`;
 
         // 更新对应的 HTML 元素
         const timeUTCElement = document.getElementById('time-utc');
