@@ -21,30 +21,28 @@ export default {
       margin: 0;
       padding: 0;
       height: 100%;
+      width: 100%; /* 确保 html 和 body 占满整个视口宽度 */
       font-family: 'Inter', system-ui, sans-serif;
-      background-color: var(--initial-bg, #000);
+      background-color: var(--initial-bg, #000); /* 背景色应用在此 */
       display: flex;
-      flex-direction: column; /* 让时间垂直排列 */
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       transition: background-color 1.5s ease-in-out;
       animation: fadein 1s ease-out;
-      text-align: center; /* 确保文本居中 */
-      gap: 1em; /* 在两个时间显示之间添加一些间距 */
+      text-align: center;
+      gap: 1em;
+      overflow: hidden; /* 防止可能出现的滚动条 */
     }
-
-    /* 移除了原有的 .container 和 .container.loaded 样式 */
 
     .time-display {
       font-size: 2.2vw;
       font-weight: 600;
       color: white;
       text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
-      /* 移除了 min-height，让它自适应内容 */
     }
 
     @media (prefers-color-scheme: light) {
-      /* 当系统是浅色模式时，让文字变深色 */
       .time-display {
         color: #111;
         text-shadow: none;
@@ -80,7 +78,7 @@ export default {
       }
       const toHex=x=>{const h=Math.round(x*255).toString(16);return h.length===1?"0"+h:h;};
       const hex=\`#\${toHex(r)}\${toHex(g)}\${toHex(b)}\`;
-      document.documentElement.style.setProperty('--initial-bg', hex);
+      document.documentElement.style.setProperty('--initial-bg', hex); // Sets the CSS variable used by body background
       document.title = hex;
       const c=document.createElement('canvas'); c.width=c.height=16;
       const ctx=c.getContext('2d'); ctx.fillStyle=hex; ctx.fillRect(0,0,16,16);
@@ -125,6 +123,9 @@ export default {
 
     // --- Apply Color to Background and Favicon ---
     function setColor(hex){
+      // Note: We are setting the background color directly on the body.
+      // The CSS rule `background-color: var(--initial - bg, #000); ` handles the initial load color.
+      // Subsequent calls to setColor directly modify body's background.
       document.body.style.backgroundColor=hex;
       document.title=hex;
       const c=document.createElement('canvas'); c.width=c.height=16;
@@ -138,17 +139,19 @@ export default {
       const now=new Date();
       const delay=1000-now.getMilliseconds();
       setTimeout(()=>{
-        if(new Date().getSeconds()%5===0) setColor(randomColor());
-        scheduleTick();
+        if(new Date().getSeconds()%5===0) setColor(randomColor()); // Change color every 5 seconds
+        scheduleTick(); // Schedule next tick
       },delay);
     }
 
     // --- Initial Setup and Event Listener ---
     (() => {
       updateTimes(); // Initial time update
-      setColor(randomColor()); // Set initial random color
+      // Initial color is set via CSS variable '--initial-bg' which is set in the first script block.
+      // We call setColor here again to immediately apply a random color using the JS function,
+      // otherwise it would wait up to 5 seconds for the first change.
+      setColor(randomColor());
       scheduleTick(); // Start the update loop
-      // 移除了 document.getElementById("container").classList.add("loaded"); 因为 container 不存在了
       document.body.addEventListener('click',()=>setColor(randomColor())); // Click to change color
     })();
   </script>
