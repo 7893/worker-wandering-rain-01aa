@@ -10,71 +10,51 @@ export default {
   <title>Color Clock</title>
   <link id="favicon" rel="shortcut icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHklEQVQ4T2NkYGD4z0ABYBw1gGE0DBhGw4BhWIQBAE5OEAELnjVHAAAAAElFTkSuQmCC" type="image/x-icon">
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      width: 100%;
+      margin: 0; padding: 0; height: 100%; width: 100%;
       font-family: Menlo, Monaco, Consolas, 'Courier New', 'Roboto Mono', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Mono', monospace;
       background-color: var(--initial-bg, #000);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
       transition: background-color 0.8s ease-out;
       animation: fadein 1s ease-out;
-      text-align: center;
-      gap: 0.8em;
-      overflow: hidden;
+      text-align: center; gap: 0.8em; overflow: hidden;
     }
-
     .time-display {
-      font-size: 2.2vw; /* 主时间大小 */
-      font-weight: 400;
-      color: white; /* 主时间默认颜色 */
-      text-shadow: 2px 2px 6px rgba(0,0,0,0.6); /* 主时间默认阴影 */
+      font-size: 2.2vw; font-weight: 400; color: white;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
     }
 
-    /* 时间戳显示样式 - 固定大小, 颜色由JS控制 */
+    /* 时间戳显示样式 - 模拟绿色辉光效果 */
     .timestamp-display {
-      position: fixed;
-      bottom: 1em;
-      right: 1.5em;
-      font-size: 12px; /* 恢复为固定像素大小 */
+      position: fixed; bottom: 1em; right: 1.5em;
+      font-size: 1.1vw; /* 主时间一半大小 */
       font-weight: 400;
-      /* 移除固定 color 和 text-shadow, 由 JS 控制 */
-      color: #888; /* 添加一个后备颜色 */
       letter-spacing: 0.05em;
+      color: #9f9; /* 基础亮绿色 */
+      text-shadow: 0 0 2px rgba(153, 255, 153, 0.7), /* 内层辉光 */
+                   0 0 5px rgba(0, 255, 0, 0.5),   /* 外层辉光 */
+                   0 0 8px rgba(0, 200, 0, 0.3);   /* 更外层弥散 */
+      opacity: 0.9; /* 轻微透明增加融入感 */
     }
 
 
     @media (prefers-color-scheme: light) {
-      /* 浅色模式下主时间颜色 */
-      .time-display {
-        color: #111;
-        text-shadow: none;
-      }
-      /* 时间戳颜色完全由 JS 控制，这里无需特殊设置 */
+      .time-display { color: #111; text-shadow: none; }
+      /* 浅色模式下，辉光效果可能不佳，但暂时保持一致 */
+      /* 如果需要在浅色模式下改变效果，可以在这里覆盖 .timestamp-display 样式 */
     }
 
-    /* 主时间的响应式字体大小调整 */
     @media (max-width: 768px) {
       .time-display { font-size: 4.5vw; }
-      /* 时间戳大小固定，无需调整 */
+      .timestamp-display { font-size: 2.2vw; }
     }
     @media (max-width: 480px) {
       .time-display { font-size: 6vw; }
-       /* 时间戳大小固定，无需调整 */
+      .timestamp-display { font-size: 3vw; }
     }
 
-    @keyframes fadein {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
+    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
   </style>
   <script>
     // --- HSL to RGB and initial color setup ---
@@ -105,15 +85,7 @@ export default {
   <div id="linux-timestamp" class="timestamp-display">Loading Timestamp…</div>
 
   <script>
-    // --- Helper Functions for Color Calculation ---
-    function hexToRgb(hex) {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
-    }
-    function calculateLuminance(r, g, b) {
-      const a = [r, g, b].map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
-      return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
-    }
+    // --- 移除了 hexToRgb 和 calculateLuminance 辅助函数，因为不再需要 ---
 
     // --- Time Update Logic ---
     function updateTimes() {
@@ -149,8 +121,8 @@ export default {
       return \`#\${toHex(r)}\${toHex(g)}\${toHex(b)}\`;
     }
 
-    // --- Apply Color to Background, Favicon, and Timestamp ---
-    // *** 恢复了动态设置时间戳颜色的逻辑 ***
+    // --- Apply Color to Background and Favicon ---
+    // *** 移除了动态设置时间戳颜色的逻辑 ***
     function setColor(hex){
       document.body.style.backgroundColor = hex;
       document.title = hex;
@@ -160,21 +132,7 @@ export default {
       const favicon = document.getElementById('favicon');
       if (favicon) favicon.href = c.toDataURL('image/x-icon');
 
-      // --- 动态设置时间戳颜色 ---
-      const timestampElement = document.getElementById('linux-timestamp');
-      if (timestampElement) {
-          const rgb = hexToRgb(hex);
-          if (rgb) {
-              const luminance = calculateLuminance(rgb.r, rgb.g, rgb.b);
-              // 根据亮度决定时间戳颜色
-              if (luminance < 0.5) { // 亮度 < 0.5 判断为暗色背景
-                  timestampElement.style.color = '#AAAAAA'; // 暗背景配浅灰色
-              } else {
-                  timestampElement.style.color = '#444444'; // 亮背景配深灰色
-              }
-          }
-      }
-       // TODO: 主时间的动态颜色调整
+      // 注意：现在时间戳的颜色和效果完全由 CSS 控制
     }
 
     // --- Scheduling Updates ---
@@ -192,7 +150,7 @@ export default {
     // --- Initial Setup and Event Listener ---
     (() => {
       updateTimes();
-      setColor(randomColor()); // setColor 会设置背景和时间戳颜色
+      setColor(randomColor()); // setColor 现在只设置背景和标题
       scheduleTick();
       document.body.addEventListener('click',()=>{ setColor(randomColor()); });
     })();
