@@ -24,14 +24,27 @@ export default {
       font-size: 2.2vw; font-weight: 400; color: white;
       text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
     }
+
+    /* 时间戳显示样式 - 模拟绿色辉光效果 */
     .timestamp-display {
       position: fixed; bottom: 1em; right: 1.5em;
-      font-size: 1.1vw; font-weight: 400; color: #888; /* Fallback color */
+      font-size: 1.1vw; /* 主时间一半大小 */
+      font-weight: 400;
       letter-spacing: 0.05em;
+      color: #9f9; /* 基础亮绿色 */
+      text-shadow: 0 0 2px rgba(153, 255, 153, 0.7), /* 内层辉光 */
+                   0 0 5px rgba(0, 255, 0, 0.5),   /* 外层辉光 */
+                   0 0 8px rgba(0, 200, 0, 0.3);   /* 更外层弥散 */
+      opacity: 0.9; /* 轻微透明增加融入感 */
     }
+
+
     @media (prefers-color-scheme: light) {
       .time-display { color: #111; text-shadow: none; }
+      /* 浅色模式下，辉光效果可能不佳，但暂时保持一致 */
+      /* 如果需要在浅色模式下改变效果，可以在这里覆盖 .timestamp-display 样式 */
     }
+
     @media (max-width: 768px) {
       .time-display { font-size: 4.5vw; }
       .timestamp-display { font-size: 2.2vw; }
@@ -40,6 +53,7 @@ export default {
       .time-display { font-size: 6vw; }
       .timestamp-display { font-size: 3vw; }
     }
+
     @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
   </style>
   <script>
@@ -51,8 +65,7 @@ export default {
       let r,g,b;
       if(s1===0){r=g=b=l1;} else {
         const hue2rgb=(p,q,t)=>{if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p;};
-        const q=l1<0.5?l1*(1+s1):l1+s1-l1*s1;
-        const p=2*l1-q;
+        const q=l1<0.5?l1*(1+s1):l1+s1-l1*s1; const p=2*l1-q;
         r=hue2rgb(p,q,h1+1/3); g=hue2rgb(p,q,h1); b=hue2rgb(p,q,h1-1/3);
       }
       const toHex=x=>{const h=Math.round(x*255).toString(16);return h.length===1?"0"+h:h;};
@@ -72,15 +85,7 @@ export default {
   <div id="linux-timestamp" class="timestamp-display">Loading Timestamp…</div>
 
   <script>
-    // --- Helper Functions for Color Calculation ---
-    function hexToRgb(hex) {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
-    }
-    function calculateLuminance(r, g, b) {
-      const a = [r, g, b].map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
-      return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
-    }
+    // --- 移除了 hexToRgb 和 calculateLuminance 辅助函数，因为不再需要 ---
 
     // --- Time Update Logic ---
     function updateTimes() {
@@ -116,8 +121,8 @@ export default {
       return \`#\${toHex(r)}\${toHex(g)}\${toHex(b)}\`;
     }
 
-    // --- Apply Color to Background, Favicon ---
-    // *** Temporarily simplified setColor: removed timestamp color logic ***
+    // --- Apply Color to Background and Favicon ---
+    // *** 移除了动态设置时间戳颜色的逻辑 ***
     function setColor(hex){
       document.body.style.backgroundColor = hex;
       document.title = hex;
@@ -127,20 +132,7 @@ export default {
       const favicon = document.getElementById('favicon');
       if (favicon) favicon.href = c.toDataURL('image/x-icon');
 
-      // --- Temporarily Commented Out ---
-      // const timestampElement = document.getElementById('linux-timestamp');
-      // if (timestampElement) {
-      //     const rgb = hexToRgb(hex);
-      //     if (rgb) {
-      //         const luminance = calculateLuminance(rgb.r, rgb.g, rgb.b);
-      //         if (luminance < 0.5) {
-      //             timestampElement.style.color = '#AAAAAA'; // 暗背景配浅灰色
-      //         } else {
-      //             timestampElement.style.color = '#444444'; // 亮背景配深灰色
-      //         }
-      //     }
-      // }
-      // --- End Temp Comment ---
+      // 注意：现在时间戳的颜色和效果完全由 CSS 控制
     }
 
     // --- Scheduling Updates ---
@@ -158,7 +150,7 @@ export default {
     // --- Initial Setup and Event Listener ---
     (() => {
       updateTimes();
-      setColor(randomColor()); // Call the (now simplified) setColor
+      setColor(randomColor()); // setColor 现在只设置背景和标题
       scheduleTick();
       document.body.addEventListener('click',()=>{ setColor(randomColor()); });
     })();
