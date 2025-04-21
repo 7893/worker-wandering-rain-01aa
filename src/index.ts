@@ -19,7 +19,7 @@ export default {
       padding: 0;
       height: 100%;
       width: 100%;
-      /* 修改字体：使用系统等宽字体栈 */
+      /* 使用系统等宽字体栈 */
       font-family: Menlo, Monaco, Consolas, 'Courier New', 'Roboto Mono', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Mono', monospace;
       background-color: var(--initial-bg, #000);
       display: flex;
@@ -31,28 +31,45 @@ export default {
       /* 页面加载淡入：保持 1 秒 */
       animation: fadein 1s ease-out;
       text-align: center;
-      gap: 1em;
+      gap: 0.8em; /* 调整元素间垂直间距 */
       overflow: hidden;
     }
 
+    /* 日期显示样式 */
+    .date-display {
+      font-size: 1.8vw; /* 比时间稍小 */
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.85); /* 稍暗以示区分 */
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+    }
+
+    /* 时间显示样式 */
     .time-display {
-      font-size: 2.2vw; /* 字体大小响应式，可考虑用 clamp() 优化 */
-      font-weight: 400; /* 常规粗细 */
+      font-size: 2.2vw;
+      font-weight: 400;
       color: white;
       text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
     }
 
     @media (prefers-color-scheme: light) {
+      /* 浅色模式下的样式 */
+      .date-display {
+        color: rgba(0, 0, 0, 0.75);
+        text-shadow: none;
+      }
       .time-display {
         color: #111;
         text-shadow: none;
       }
     }
 
+    /* 响应式字体大小调整 */
     @media (max-width: 768px) {
+      .date-display { font-size: 3.5vw; }
       .time-display { font-size: 4.5vw; }
     }
     @media (max-width: 480px) {
+      .date-display { font-size: 4.5vw; }
       .time-display { font-size: 6vw; }
     }
 
@@ -82,31 +99,52 @@ export default {
       document.title = hex;
       const c=document.createElement('canvas'); c.width=c.height=16;
       const ctx=c.getContext('2d'); ctx.fillStyle=hex; ctx.fillRect(0,0,16,16);
-      const favicon = document.getElementById('favicon'); // Cache favicon element
-      if (favicon) favicon.href = c.toDataURL('image/x-icon'); // Check if exists before setting href
+      const favicon = document.getElementById('favicon');
+      if (favicon) favicon.href = c.toDataURL('image/x-icon');
     })();
   </script>
 </head>
 <body>
+  <div id="date-display" class="date-display">Loading Date…</div>
   <div id="time-utc" class="time-display">Loading UTC…</div>
   <div id="time-utc8" class="time-display">Loading UTC+8…</div>
 
   <script>
     // --- Time Update Logic ---
     function updateTimes() {
-      const now = new Date();
-      const optDate={year:'numeric',month:'2-digit',day:'2-digit'};
-      const optTime={hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'};
-      const uD=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',...optDate}).format(now);
-      const uT=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',...optTime}).format(now);
-      const timeUTCElement = document.getElementById('time-utc'); // Cache element
-      if (timeUTCElement) timeUTCElement.textContent = \`\${uD} \${uT} (UTC+0)\`;
+        const now = new Date();
+        // 定义日期和时间的格式化选项
+        const optDate = { year: 'numeric', month: '2-digit', day: '2-digit' };
+        const optTime = { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
 
-      const cD=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',...optDate}).format(now);
-      const cT=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',...optTime}).format(now);
-      const timeUTC8Element = document.getElementById('time-utc8'); // Cache element
-      if (timeUTC8Element) timeUTC8Element.textContent = \`\${cD} \${cT} (UTC+8)\`;
+        // 获取日期字符串 (使用 'en-GB' 保证 DD/MM/YYYY 格式, 时区用 UTC)
+        const commonDate = new Intl.DateTimeFormat('en-GB', { ...optDate, timeZone: 'UTC' }).format(now);
+
+        // 获取 UTC 时间字符串
+        const uT = new Intl.DateTimeFormat('en-GB', { ...optTime, timeZone: 'UTC' }).format(now);
+        const utcString = \`\${uT} (UTC+0)\`;
+
+        // 获取 UTC+8 时间字符串
+        const cT = new Intl.DateTimeFormat('en-GB', { ...optTime, timeZone: 'Asia/Shanghai' }).format(now);
+        const utc8String = \`\${cT} (UTC+8)\`;
+
+        // 更新对应的 HTML 元素
+        const dateElement = document.getElementById('date-display');
+        if (dateElement && dateElement.textContent !== commonDate) {
+             dateElement.textContent = commonDate;
+        }
+
+        const timeUTCElement = document.getElementById('time-utc');
+        if (timeUTCElement && timeUTCElement.textContent !== utcString) {
+            timeUTCElement.textContent = utcString;
+        }
+
+        const timeUTC8Element = document.getElementById('time-utc8');
+        if (timeUTC8Element && timeUTC8Element.textContent !== utc8String) {
+            timeUTC8Element.textContent = utc8String;
+        }
     }
+
 
     // --- Random Color Generation ---
     function randomColor(){
@@ -133,24 +171,29 @@ export default {
       const ctx=c.getContext('2d'); ctx.fillStyle=hex; ctx.fillRect(0,0,16,16);
       const favicon = document.getElementById('favicon');
       if (favicon) favicon.href = c.toDataURL('image/x-icon');
+
+      // TODO: 在这里可以根据 hex 亮度调整 date-display 和 time-display 的颜色
     }
 
     // --- Scheduling Updates ---
     function scheduleTick(){
-      updateTimes();
+      updateTimes(); // 立即更新一次时间显示
       const now=new Date();
+      // 校准到下一秒的开始，使更新更精确
       const delay=1000-now.getMilliseconds();
       setTimeout(()=>{
+        // 每 5 秒的整数倍秒时更换颜色
         if(new Date().getSeconds()%5===0) setColor(randomColor());
-        scheduleTick();
+        scheduleTick(); // 安排下一次更新
       },delay);
     }
 
     // --- Initial Setup and Event Listener ---
     (() => {
-      updateTimes();
-      setColor(randomColor());
-      scheduleTick();
+      updateTimes(); // 初始化时间显示
+      setColor(randomColor()); // 初始化背景色
+      scheduleTick(); // 启动定时更新
+      // 点击页面更换背景色
       document.body.addEventListener('click',()=>setColor(randomColor()));
     })();
   </script>
