@@ -109,7 +109,6 @@ export default {
       },delay);
     }
 
-    // 初始化
     (() => {
       updateTimes();
       setColor(randomColor());
@@ -124,9 +123,10 @@ export default {
     return new Response(html, {
       headers: {
         "Content-Type": "text/html; charset=UTF-8",
-        "Cache-Control": "no-store"
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
       }
     });
   }
 };
-
