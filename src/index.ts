@@ -24,53 +24,27 @@ export default {
       font-family: 'Inter', system-ui, sans-serif;
       background-color: var(--initial-bg, #000);
       display: flex;
+      flex-direction: column; /* 让时间垂直排列 */
       justify-content: center;
       align-items: center;
       transition: background-color 1.5s ease-in-out;
       animation: fadein 1s ease-out;
+      text-align: center; /* 确保文本居中 */
+      gap: 1em; /* 在两个时间显示之间添加一些间距 */
     }
 
-    body.light {
-      background-color: #f5f5f5;
-    }
-
-    body.dark {
-      background-color: #000000;
-    }
-
-    .container {
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      gap: 1em;
-      padding: 2em;
-      border-radius: 1rem;
-      background-color: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(6px);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-      opacity: 0;
-      transform: translateY(10px);
-      transition: all 0.8s ease-out;
-    }
-
-    .container.loaded {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    /* 移除了原有的 .container 和 .container.loaded 样式 */
 
     .time-display {
       font-size: 2.2vw;
       font-weight: 600;
-      min-height: 2.5em;
       color: white;
       text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+      /* 移除了 min-height，让它自适应内容 */
     }
 
     @media (prefers-color-scheme: light) {
-      .container {
-        background-color: rgba(240, 240, 240, 0.85);
-        color: #111;
-      }
+      /* 当系统是浅色模式时，让文字变深色 */
       .time-display {
         color: #111;
         text-shadow: none;
@@ -90,6 +64,7 @@ export default {
     }
   </style>
   <script>
+    // --- HSL to RGB and initial color setup ---
     (function(){
       function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
       const h=randInt(0,359), s=randInt(70,90), l=randInt(50,70);
@@ -114,11 +89,11 @@ export default {
   </script>
 </head>
 <body>
-  <div class="container" id="container">
-    <div id="time-utc" class="time-display">Loading UTC…</div>
-    <div id="time-utc8" class="time-display">Loading UTC+8…</div>
-  </div>
+  <div id="time-utc" class="time-display">Loading UTC…</div>
+  <div id="time-utc8" class="time-display">Loading UTC+8…</div>
+
   <script>
+    // --- Time Update Logic ---
     function updateTimes() {
       const now = new Date();
       const optDate={year:'numeric',month:'2-digit',day:'2-digit'};
@@ -131,6 +106,7 @@ export default {
       document.getElementById('time-utc8').textContent=\`\${cD} \${cT} (UTC+8)\`;
     }
 
+    // --- Random Color Generation ---
     function randomColor(){
       const h=Math.floor(Math.random()*360), s=Math.floor(Math.random()*20+70), l=Math.floor(Math.random()*20+40);
       const h1=h/360, s1=s/100, l1=l/100;
@@ -147,6 +123,7 @@ export default {
       return \`#\${toHex(r)}\${toHex(g)}\${toHex(b)}\`;
     }
 
+    // --- Apply Color to Background and Favicon ---
     function setColor(hex){
       document.body.style.backgroundColor=hex;
       document.title=hex;
@@ -155,6 +132,7 @@ export default {
       document.getElementById('favicon').href=c.toDataURL('image/x-icon');
     }
 
+    // --- Scheduling Updates ---
     function scheduleTick(){
       updateTimes();
       const now=new Date();
@@ -165,12 +143,13 @@ export default {
       },delay);
     }
 
+    // --- Initial Setup and Event Listener ---
     (() => {
-      updateTimes();
-      setColor(randomColor());
-      scheduleTick();
-      document.getElementById("container").classList.add("loaded");
-      document.body.addEventListener('click',()=>setColor(randomColor()));
+      updateTimes(); // Initial time update
+      setColor(randomColor()); // Set initial random color
+      scheduleTick(); // Start the update loop
+      // 移除了 document.getElementById("container").classList.add("loaded"); 因为 container 不存在了
+      document.body.addEventListener('click',()=>setColor(randomColor())); // Click to change color
     })();
   </script>
 </body>
