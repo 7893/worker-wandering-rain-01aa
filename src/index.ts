@@ -4,43 +4,82 @@ export default {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <meta name="theme-color" content="#000000"/>
-  <title></title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#000000" />
+  <title>Color Clock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <link id="favicon" rel="shortcut icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHklEQVQ4T2NkYGD4z0ABYBw1gGE0DBhGw4BhWIQBAE5OEAELnjVHAAAAAElFTkSuQmCC" type="image/x-icon">
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
+      font-family: 'Inter', system-ui, sans-serif;
       background-color: var(--initial-bg, #000);
-      font-family: system-ui, sans-serif;
       display: flex;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
-      animation: fadein 0.8s ease-in;
+      transition: background-color 1.5s ease-in-out;
+      animation: fadein 1s ease-out;
+    }
+
+    body.light {
+      background-color: #f5f5f5;
+    }
+
+    body.dark {
+      background-color: #000000;
+    }
+
+    .container {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+      padding: 2em;
+      border-radius: 1rem;
+      background-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.8s ease-out;
+    }
+
+    .container.loaded {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     .time-display {
-      font-size: 3vw;
+      font-size: 2.2vw;
+      font-weight: 600;
+      min-height: 2.5em;
       color: white;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-      min-height: 1.5em;
-      opacity: 0;
-      transition: opacity 0.5s ease, background-color 1.5s ease-in-out;
-      text-align: center;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
     }
 
-    .time-display.loaded {
-      opacity: 1;
+    @media (prefers-color-scheme: light) {
+      .container {
+        background-color: rgba(240, 240, 240, 0.85);
+        color: #111;
+      }
+      .time-display {
+        color: #111;
+        text-shadow: none;
+      }
     }
 
     @media (max-width: 768px) {
-      .time-display { font-size: 5vw; }
+      .time-display { font-size: 4.5vw; }
     }
-
     @media (max-width: 480px) {
       .time-display { font-size: 6vw; }
     }
@@ -67,7 +106,7 @@ export default {
       const toHex=x=>{const h=Math.round(x*255).toString(16);return h.length===1?"0"+h:h;};
       const hex=\`#\${toHex(r)}\${toHex(g)}\${toHex(b)}\`;
       document.documentElement.style.setProperty('--initial-bg', hex);
-      document.title=hex;
+      document.title = hex;
       const c=document.createElement('canvas'); c.width=c.height=16;
       const ctx=c.getContext('2d'); ctx.fillStyle=hex; ctx.fillRect(0,0,16,16);
       document.getElementById('favicon').href=c.toDataURL('image/x-icon');
@@ -75,8 +114,10 @@ export default {
   </script>
 </head>
 <body>
-  <div id="time-utc" class="time-display">Loading UTC...</div>
-  <div id="time-utc8" class="time-display">Loading UTC+8...</div>
+  <div class="container" id="container">
+    <div id="time-utc" class="time-display">Loading UTC…</div>
+    <div id="time-utc8" class="time-display">Loading UTC+8…</div>
+  </div>
   <script>
     function updateTimes() {
       const now = new Date();
@@ -84,14 +125,10 @@ export default {
       const optTime={hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'};
       const uD=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',...optDate}).format(now);
       const uT=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',...optTime}).format(now);
-      const utcEl=document.getElementById('time-utc');
-      utcEl.textContent=\`\${uD} \${uT} (UTC+0)\`;
-      utcEl.classList.add('loaded');
+      document.getElementById('time-utc').textContent=\`\${uD} \${uT} (UTC+0)\`;
       const cD=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',...optDate}).format(now);
       const cT=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',...optTime}).format(now);
-      const utc8El=document.getElementById('time-utc8');
-      utc8El.textContent=\`\${cD} \${cT} (UTC+8)\`;
-      utc8El.classList.add('loaded');
+      document.getElementById('time-utc8').textContent=\`\${cD} \${cT} (UTC+8)\`;
     }
 
     function randomColor(){
@@ -132,6 +169,7 @@ export default {
       updateTimes();
       setColor(randomColor());
       scheduleTick();
+      document.getElementById("container").classList.add("loaded");
       document.body.addEventListener('click',()=>setColor(randomColor()));
     })();
   </script>
