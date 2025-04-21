@@ -1,0 +1,12 @@
+name = "worker-wandering-rain-01aa"
+main = "src/index.ts"
+compatibility_date = "2025-04-20"
+
+# 启用 Node.js 兼容模式（包括 fs 等 polyfill API）
+compatibility_flags = [
+  "nodejs_compat"
+]
+
+[observability.logs]
+enabled = true
+logpush = true
