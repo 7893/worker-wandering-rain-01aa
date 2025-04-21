@@ -21,28 +21,33 @@ export default {
       margin: 0;
       padding: 0;
       height: 100%;
-      width: 100%; /* 确保 html 和 body 占满整个视口宽度 */
+      width: 100%;
       font-family: 'Inter', system-ui, sans-serif;
-      background-color: var(--initial-bg, #000); /* 背景色应用在此 */
+      background-color: var(--initial-bg, #000);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      transition: background-color 1.5s ease-in-out;
+      /* 背景色过渡：修改为 0.8 秒，ease-out 效果 */
+      transition: background-color 0.8s ease-out;
+      /* 页面加载淡入：保持 1 秒 */
       animation: fadein 1s ease-out;
       text-align: center;
       gap: 1em;
-      overflow: hidden; /* 防止可能出现的滚动条 */
+      overflow: hidden;
     }
 
     .time-display {
       font-size: 2.2vw;
-      font-weight: 600;
-      color: white;
-      text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+      font-weight: 600; /* 字体粗细 */
+      color: white; /* 默认字体颜色 */
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.6); /* 默认阴影 */
+      /* 可以考虑给 color 和 text-shadow 也加上 transition */
+      /* transition: color 0.5s ease-out, text-shadow 0.5s ease-out; */
     }
 
     @media (prefers-color-scheme: light) {
+      /* 浅色模式下的样式 */
       .time-display {
         color: #111;
         text-shadow: none;
@@ -78,7 +83,7 @@ export default {
       }
       const toHex=x=>{const h=Math.round(x*255).toString(16);return h.length===1?"0"+h:h;};
       const hex=\`#\${toHex(r)}\${toHex(g)}\${toHex(b)}\`;
-      document.documentElement.style.setProperty('--initial-bg', hex); // Sets the CSS variable used by body background
+      document.documentElement.style.setProperty('--initial-bg', hex);
       document.title = hex;
       const c=document.createElement('canvas'); c.width=c.height=16;
       const ctx=c.getContext('2d'); ctx.fillStyle=hex; ctx.fillRect(0,0,16,16);
@@ -128,7 +133,11 @@ export default {
       document.title=hex;
       const c=document.createElement('canvas'); c.width=c.height=16;
       const ctx=c.getContext('2d'); ctx.fillStyle=hex; ctx.fillRect(0,0,16,16);
-      document.getElementById('favicon').href=c.toDataURL('image/x-icon');
+      const favicon = document.getElementById('favicon'); // Get favicon element
+      if (favicon) favicon.href = c.toDataURL('image/x-icon'); // Check if exists before setting href
+
+      // *** 字体优化可以在这里添加逻辑 ***
+      // 例如：计算 hex 的亮度，然后设置 .time-display 的 color 和 text-shadow
     }
 
     // --- Scheduling Updates ---
