@@ -1,11 +1,12 @@
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(): Promise<Response> {
     const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="theme-color" content="#000000"/>
   <title></title>
   <link id="favicon" rel="shortcut icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHklEQVQ4T2NkYGD4z0ABYBw1gGE0DBhGw4BhWIQBAE5OEAELnjVHAAAAAElFTkSuQmCC" type="image/x-icon">
   <style>
@@ -19,20 +20,34 @@ export default {
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      transition: background-color 1.5s ease-in-out;
+      animation: fadein 0.8s ease-in;
     }
+
     .time-display {
       font-size: 3vw;
       color: white;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-      margin: 0.5em;
+      min-height: 1.5em;
+      opacity: 0;
+      transition: opacity 0.5s ease, background-color 1.5s ease-in-out;
       text-align: center;
     }
+
+    .time-display.loaded {
+      opacity: 1;
+    }
+
     @media (max-width: 768px) {
       .time-display { font-size: 5vw; }
     }
+
     @media (max-width: 480px) {
       .time-display { font-size: 6vw; }
+    }
+
+    @keyframes fadein {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
   </style>
   <script>
@@ -60,8 +75,8 @@ export default {
   </script>
 </head>
 <body>
-  <div id="time-utc" class="time-display"></div>
-  <div id="time-utc8" class="time-display"></div>
+  <div id="time-utc" class="time-display">Loading UTC...</div>
+  <div id="time-utc8" class="time-display">Loading UTC+8...</div>
   <script>
     function updateTimes() {
       const now = new Date();
@@ -69,10 +84,14 @@ export default {
       const optTime={hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'};
       const uD=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',...optDate}).format(now);
       const uT=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',...optTime}).format(now);
-      document.getElementById('time-utc').textContent=\`\${uD} \${uT} (UTC+0)\`;
+      const utcEl=document.getElementById('time-utc');
+      utcEl.textContent=\`\${uD} \${uT} (UTC+0)\`;
+      utcEl.classList.add('loaded');
       const cD=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',...optDate}).format(now);
       const cT=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',...optTime}).format(now);
-      document.getElementById('time-utc8').textContent=\`\${cD} \${cT} (UTC+8)\`;
+      const utc8El=document.getElementById('time-utc8');
+      utc8El.textContent=\`\${cD} \${cT} (UTC+8)\`;
+      utc8El.classList.add('loaded');
     }
 
     function randomColor(){
