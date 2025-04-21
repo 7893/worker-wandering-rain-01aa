@@ -33,44 +33,42 @@ export default {
     }
 
     .time-display {
-      font-size: 2.2vw;
+      font-size: 2.2vw; /* 主时间大小 */
       font-weight: 400;
-      color: white;
-      text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+      color: white; /* 主时间默认颜色 */
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.6); /* 主时间默认阴影 */
     }
 
-    /* 新增：时间戳显示样式 */
+    /* 时间戳显示样式 */
     .timestamp-display {
-      position: fixed; /* 固定在视口位置 */
-      bottom: 1em;     /* 距离底部 1em */
-      right: 1.5em;    /* 距离右侧 1.5em */
-      font-size: 1.6vw; /* 字体大小 */
+      position: fixed;
+      bottom: 1em;
+      right: 1.5em;
+      font-size: 12px; /* 改为固定像素大小 */
       font-weight: 400;
-      color: rgba(255, 255, 255, 0.7); /* 半透明白色 */
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+      /* 移除固定 color 和 text-shadow, 由 JS 控制 */
+      color: #888; /* 添加一个后备颜色 */
+      letter-spacing: 0.05em; /* 轻微增加字间距，可能增强机械感 */
     }
 
 
     @media (prefers-color-scheme: light) {
+      /* 浅色模式下主时间颜色 */
       .time-display {
         color: #111;
         text-shadow: none;
       }
-      /* 新增：浅色模式下的时间戳样式 */
-      .timestamp-display {
-        color: rgba(0, 0, 0, 0.6);
-        text-shadow: none;
-      }
+      /* 时间戳颜色完全由 JS 控制，这里无需特殊设置 */
     }
 
-    /* 响应式字体大小调整 */
+    /* 主时间的响应式字体大小调整 */
     @media (max-width: 768px) {
       .time-display { font-size: 4.5vw; }
-      .timestamp-display { font-size: 2.5vw; } /* 调整时间戳大小 */
+      /* 时间戳大小固定，无需调整 */
     }
     @media (max-width: 480px) {
       .time-display { font-size: 6vw; }
-      .timestamp-display { font-size: 3.5vw; } /* 调整时间戳大小 */
+      /* 时间戳大小固定，无需调整 */
     }
 
     @keyframes fadein {
@@ -107,10 +105,32 @@ export default {
 <body>
   <div id="time-utc" class="time-display">Loading UTC…</div>
   <div id="time-utc8" class="time-display">Loading UTC+8…</div>
-
   <div id="linux-timestamp" class="timestamp-display">Loading Timestamp…</div>
 
   <script>
+    // --- Helper Functions for Color Calculation ---
+
+    /** 将 HEX 颜色 (#RRGGBB) 转换为 RGB 对象 {r, g, b} (0-255) */
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    }
+
+    /** 计算 RGB 颜色的相对亮度 (0-1) */
+    function calculateLuminance(r, g, b) {
+      // Formula based on WCAG standards for perceived luminance
+      const a = [r, g, b].map(function (v) {
+        v /= 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+    }
+
+
     // --- Time Update Logic ---
     function updateTimes() {
         const now = new Date();
@@ -128,7 +148,6 @@ export default {
         const utc8String = cD + ' ' + cT + ' (UTC+8)';
 
         // --- Linux Timestamp ---
-        // 计算 Unix 时间戳 (秒)
         const linuxTimestamp = Math.floor(now.getTime() / 1000);
 
         // --- Update Elements ---
@@ -136,14 +155,11 @@ export default {
         if (timeUTCElement && timeUTCElement.textContent !== utcString) {
             timeUTCElement.textContent = utcString;
         }
-
         const timeUTC8Element = document.getElementById('time-utc8');
         if (timeUTC8Element && timeUTC8Element.textContent !== utc8String) {
             timeUTC8Element.textContent = utc8String;
         }
-
         const timestampElement = document.getElementById('linux-timestamp');
-        // 时间戳每秒都变，直接更新即可
         if (timestampElement) {
             timestampElement.textContent = linuxTimestamp;
         }
@@ -152,6 +168,7 @@ export default {
 
     // --- Random Color Generation ---
     function randomColor(){
+       // ... (保持不变) ...
       const h=Math.floor(Math.random()*360), s=Math.floor(Math.random()*20+70), l=Math.floor(Math.random()*20+40);
       const h1=h/360, s1=s/100, l1=l/100;
       let r,g,b;
@@ -167,35 +184,66 @@ export default {
       return \`#\${toHex(r)}\${toHex(g)}\${toHex(b)}\`;
     }
 
-    // --- Apply Color to Background and Favicon ---
+    // --- Apply Color to Background, Favicon, and Timestamp ---
     function setColor(hex){
-      document.body.style.backgroundColor=hex;
-      document.title=hex;
+      // 设置背景色和标题
+      document.body.style.backgroundColor = hex;
+      document.title = hex;
+
+      // 更新 Favicon
       const c=document.createElement('canvas'); c.width=c.height=16;
       const ctx=c.getContext('2d'); ctx.fillStyle=hex; ctx.fillRect(0,0,16,16);
       const favicon = document.getElementById('favicon');
       if (favicon) favicon.href = c.toDataURL('image/x-icon');
 
-      // TODO: 在这里可以根据 hex 亮度调整 .time-display 和 .timestamp-display 的颜色
+      // --- 动态设置时间戳颜色 ---
+      const timestampElement = document.getElementById('linux-timestamp');
+      if (timestampElement) {
+          const rgb = hexToRgb(hex);
+          if (rgb) {
+              const luminance = calculateLuminance(rgb.r, rgb.g, rgb.b);
+              // 根据亮度决定时间戳颜色
+              // 亮度 < 0.5 判断为暗色背景
+              if (luminance < 0.5) {
+                  timestampElement.style.color = '#AAAAAA'; // 暗背景配浅灰色
+              } else {
+                  timestampElement.style.color = '#444444'; // 亮背景配深灰色
+              }
+          }
+      }
+
+      // TODO: 未来可以考虑根据亮度调整主时间 .time-display 的颜色
     }
 
     // --- Scheduling Updates ---
     function scheduleTick(){
-      updateTimes(); // 更新所有时间显示
+      updateTimes();
       const now=new Date();
       const delay=1000-now.getMilliseconds();
       setTimeout(()=>{
-        if(new Date().getSeconds()%5===0) setColor(randomColor());
-        scheduleTick();
+        // 每 5 秒检查是否需要更换颜色
+        const currentSeconds = new Date().getSeconds();
+        if(currentSeconds % 5 === 0) {
+            setColor(randomColor());
+        }
+        scheduleTick(); // 安排下一次更新
       },delay);
     }
 
     // --- Initial Setup and Event Listener ---
     (() => {
-      updateTimes();
-      setColor(randomColor());
-      scheduleTick();
-      document.body.addEventListener('click',()=>setColor(randomColor()));
+      // 缓存时间戳元素引用
+      const timestampElementRef = document.getElementById('linux-timestamp');
+
+      updateTimes(); // 初始化时间显示
+      setColor(randomColor()); // 初始化背景色和时间戳颜色
+
+      scheduleTick(); // 启动定时更新
+
+      // 点击页面更换背景色
+      document.body.addEventListener('click',()=>{
+          setColor(randomColor());
+      });
     })();
   </script>
 </body>
