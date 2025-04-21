@@ -8,9 +8,6 @@ export default {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#000000" />
   <title>Color Clock</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <link id="favicon" rel="shortcut icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHklEQVQ4T2NkYGD4z0ABYBw1gGE0DBhGw4BhWIQBAE5OEAELnjVHAAAAAElFTkSuQmCC" type="image/x-icon">
   <style>
     * {
@@ -22,13 +19,14 @@ export default {
       padding: 0;
       height: 100%;
       width: 100%;
-      font-family: 'Inter', system-ui, sans-serif;
+      /* 修改字体：使用系统等宽字体栈 */
+      font-family: Menlo, Monaco, Consolas, 'Courier New', 'Roboto Mono', 'DejaVu Sans Mono', 'Liberation Mono', 'Noto Mono', monospace;
       background-color: var(--initial-bg, #000);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      /* 背景色过渡：修改为 0.8 秒，ease-out 效果 */
+      /* 背景色过渡：0.8 秒，ease-out 效果 */
       transition: background-color 0.8s ease-out;
       /* 页面加载淡入：保持 1 秒 */
       animation: fadein 1s ease-out;
@@ -38,16 +36,13 @@ export default {
     }
 
     .time-display {
-      font-size: 2.2vw;
-      font-weight: 600; /* 字体粗细 */
-      color: white; /* 默认字体颜色 */
-      text-shadow: 2px 2px 6px rgba(0,0,0,0.6); /* 默认阴影 */
-      /* 可以考虑给 color 和 text-shadow 也加上 transition */
-      /* transition: color 0.5s ease-out, text-shadow 0.5s ease-out; */
+      font-size: 2.2vw; /* 字体大小响应式，可考虑用 clamp() 优化 */
+      font-weight: 400; /* 常规粗细 */
+      color: white;
+      text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
     }
 
     @media (prefers-color-scheme: light) {
-      /* 浅色模式下的样式 */
       .time-display {
         color: #111;
         text-shadow: none;
@@ -87,7 +82,8 @@ export default {
       document.title = hex;
       const c=document.createElement('canvas'); c.width=c.height=16;
       const ctx=c.getContext('2d'); ctx.fillStyle=hex; ctx.fillRect(0,0,16,16);
-      document.getElementById('favicon').href=c.toDataURL('image/x-icon');
+      const favicon = document.getElementById('favicon'); // Cache favicon element
+      if (favicon) favicon.href = c.toDataURL('image/x-icon'); // Check if exists before setting href
     })();
   </script>
 </head>
@@ -103,10 +99,13 @@ export default {
       const optTime={hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'};
       const uD=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',...optDate}).format(now);
       const uT=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',...optTime}).format(now);
-      document.getElementById('time-utc').textContent=\`\${uD} \${uT} (UTC+0)\`;
+      const timeUTCElement = document.getElementById('time-utc'); // Cache element
+      if (timeUTCElement) timeUTCElement.textContent = \`\${uD} \${uT} (UTC+0)\`;
+
       const cD=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',...optDate}).format(now);
       const cT=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',...optTime}).format(now);
-      document.getElementById('time-utc8').textContent=\`\${cD} \${cT} (UTC+8)\`;
+      const timeUTC8Element = document.getElementById('time-utc8'); // Cache element
+      if (timeUTC8Element) timeUTC8Element.textContent = \`\${cD} \${cT} (UTC+8)\`;
     }
 
     // --- Random Color Generation ---
@@ -128,16 +127,12 @@ export default {
 
     // --- Apply Color to Background and Favicon ---
     function setColor(hex){
-      // --- 注释已移除以修复构建错误 ---
       document.body.style.backgroundColor=hex;
       document.title=hex;
       const c=document.createElement('canvas'); c.width=c.height=16;
       const ctx=c.getContext('2d'); ctx.fillStyle=hex; ctx.fillRect(0,0,16,16);
-      const favicon = document.getElementById('favicon'); // Get favicon element
-      if (favicon) favicon.href = c.toDataURL('image/x-icon'); // Check if exists before setting href
-
-      // *** 字体优化可以在这里添加逻辑 ***
-      // 例如：计算 hex 的亮度，然后设置 .time-display 的 color 和 text-shadow
+      const favicon = document.getElementById('favicon');
+      if (favicon) favicon.href = c.toDataURL('image/x-icon');
     }
 
     // --- Scheduling Updates ---
@@ -146,17 +141,17 @@ export default {
       const now=new Date();
       const delay=1000-now.getMilliseconds();
       setTimeout(()=>{
-        if(new Date().getSeconds()%5===0) setColor(randomColor()); // Change color every 5 seconds
-        scheduleTick(); // Schedule next tick
+        if(new Date().getSeconds()%5===0) setColor(randomColor());
+        scheduleTick();
       },delay);
     }
 
     // --- Initial Setup and Event Listener ---
     (() => {
-      updateTimes(); // Initial time update
-      setColor(randomColor()); // Apply an initial random color via JS
-      scheduleTick(); // Start the update loop
-      document.body.addEventListener('click',()=>setColor(randomColor())); // Click to change color
+      updateTimes();
+      setColor(randomColor());
+      scheduleTick();
+      document.body.addEventListener('click',()=>setColor(randomColor()));
     })();
   </script>
 </body>
