@@ -6,19 +6,25 @@ import { getCurrentTableName } from '../lib/time-utils';
 const limiter = new RateLimiter(30);
 
 export default {
-  async fetch(): Promise<Response> {
+  async fetch(request: Request): Promise<Response> {
+    if (request.method === "POST") {
+      try {
+        const data = await request.json();
+        const tableName = getCurrentTableName();
+        if (limiter.canProceed()) {
+          await ensureMonthlyTableAndRestApi(tableName);
+          await insertColorRecord(tableName, data.color, data.trace_id, data.source);
+        }
+        return new Response("OK", { status: 200 });
+      } catch (e) {
+        console.error(e);
+        return new Response("Bad Request", { status: 400 });
+      }
+    }
+
+    // 正常 GET 请求，返回 HTML
     const traceId = generateTraceId();
     const colorHex = generateRandomColorHex();
-    const now = new Date();
-    const eventAt = now.toISOString();
-    const source = "o"; // 打开页面标记
-
-    const tableName = getCurrentTableName();
-
-    if (limiter.canProceed()) {
-      await ensureMonthlyTableAndRestApi(tableName);
-      await insertColorRecord(tableName, colorHex, traceId, source);
-    }
 
     const html = `
 <!DOCTYPE html>
@@ -44,7 +50,7 @@ async function sendColorChange(hex, sourceType) {
     await fetch('/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ color: hex, trace_id: "${traceId}", source: sourceType, event_at: new Date().toISOString() })
+      body: JSON.stringify({ color: hex, trace_id: "${traceId}", source: sourceType })
     });
   } catch (e) { console.error(e); }
 }
