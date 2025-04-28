@@ -1,4 +1,4 @@
-const BASE_URL = "https://etjyvuvqxyn1sjp-g0gyvjofm9d4w4k4.adb.us-ashburn-1.oraclecloudapps.com/ords/admin"; // 改成你的实际地址
+const BASE_URL = "https://etjyvuvqxyn1sjp-g0gyvjofm9d4w4k4.adb.us-ashburn-1.oraclecloudapps.com/ords/admin";
 const ADMIN_SCHEMA = "admin";
 
 async function tableExists(tableName: string): Promise<boolean> {
