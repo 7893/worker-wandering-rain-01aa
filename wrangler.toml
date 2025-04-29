@@ -8,3 +8,15 @@ compatibility_flags = [
 
 [observability.logs]
 enabled = true
+
+# 添加 [vars] 部分来声明 ORDS_ADMIN_SCHEMA
+# 这个值 (ADMIN) 通常不被视为高度敏感，可以放在 vars 中
+[vars]
+ORDS_ADMIN_SCHEMA = "ADMIN"
+
+# 关于 ORDS_BASE_URL:
+# - 它的真实值我们已经确定了。
+# - 强烈建议您通过 `wrangler secret put ORDS_BASE_URL` 命令将其设置为 Secret。
+# - Cloudflare 会在部署时自动将 Secret 值注入到 env.ORDS_BASE_URL。
+# - 因此，通常不需要在 wrangler.toml 的 [vars] 中为它设置值或占位符。
+# - 确保您已经在 Cloudflare Dashboard 中正确设置了这个 Secret！
