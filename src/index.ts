@@ -11,7 +11,7 @@ import { RateLimiter } from '../lib/rate-limit';
 import { insertColorRecord, Env as DbEnv } from '../lib/db-utils';
 
 // Import the HTML template content as a string
-import pageTemplate from './template.html?raw';
+import pageTemplate from './template.html';
 
 // --- Environment Interface ---
 // Use the Env interface exported from db-utils, assuming it contains all needed vars
