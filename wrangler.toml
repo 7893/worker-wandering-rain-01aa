@@ -13,3 +13,6 @@ ORDS_BASE_URL = "https://adb.ap-tokyo-1.oraclecloud.com" # 例如: "https://adb.
 ORDS_SCHEMA_PATH = "ords/admin"
 ORDS_API_PATH = "api/v1/colors"
 # 注意：不要在这里添加 DB_PASSWORD 或 HMAC_SHARED_SECRET
+
+[observability.logs]
+enabled = true
