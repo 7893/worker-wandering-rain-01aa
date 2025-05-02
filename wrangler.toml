@@ -9,10 +9,10 @@ rules = [
 
 [vars]
 DB_USER = "ADMIN"
-ORDS_BASE_URL = "https://adb.ap-tokyo-1.oraclecloud.com" # 例如: "https://adb.ap-tokyo-1.oraclecloud.com"
+ORDS_BASE_URL = "https://W9CIGS8AX3PONZM-IOFTNBQU5K6ZB6EA.adb.ap-tokyo-1.oraclecloudapps.com" # <-- 已更新为正确的长主机名 URL!
 ORDS_SCHEMA_PATH = "ords/admin"
 ORDS_API_PATH = "api/v1/colors"
-# 注意：不要在这里添加 DB_PASSWORD 或 HMAC_SHARED_SECRET
+# 再次提醒: 不要在这里添加 DB_PASSWORD 或 HMAC_SHARED_SECRET
 
 [observability.logs]
 enabled = true
