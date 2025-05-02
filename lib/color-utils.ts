@@ -28,6 +28,4 @@ export function generateRandomColorHex(): string {
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-export function generateTraceId(): string {
-    return crypto.randomUUID();
-}
+// Redundant generateTraceId function has been removed.
