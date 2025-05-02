@@ -98,7 +98,8 @@ export default {
         .replaceAll('__COLOR_HEX__', colorHex)
         // Ensure '#' in color is properly encoded for use in SVG data URI
         .replaceAll('__COLOR_HEX_URL_ENCODED__', colorHex.replace('#', '%23'))
-        .replaceAll('__TRACE_ID__', traceId);
+        .replaceAll('__TRACE_ID__', traceId)
+        .replaceAll('__INITIAL_COLOR_HEX__', colorHex); // <-- *** 这行是添加的 ***
 
       // Return the processed HTML
       return new Response(htmlContent, {
@@ -124,3 +125,4 @@ export default {
   //   // Add Db2 ping logic here later
   // }
 };
+
