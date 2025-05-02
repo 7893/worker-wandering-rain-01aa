@@ -1,205 +1,107 @@
-import { generateRandomColorHex, generateTraceId } from '../lib/color-utils';
-import { ensureMonthlyTableAndRestApi, insertColorRecord } from '../lib/db-utils';
+// src/index.ts
+
+// --- Imports ---
+// Import utility functions
+import { generateRandomColorHex } from '../lib/color-utils'; // Assuming generateTraceId is also in color-utils or trace-utils
+import { generateTraceId } from '../lib/trace-utils'; // Import trace ID generator
 import { RateLimiter } from '../lib/rate-limit';
-import { getCurrentTableName } from '../lib/time-utils';
+// import { getCurrentTableName } from '../lib/time-utils'; // No longer needed for DB logic, maybe for logging
 
-// Define an interface for the environment variables we expect
-// These must be bound in wrangler.toml
-interface Env {
-  ORDS_BASE_URL: string;
-  ORDS_ADMIN_SCHEMA: string;
-  // Add other bindings/secrets (e.g., KV namespaces, Durable Object bindings) if needed
-}
+// Import the NEW database utility function and Env interface
+import { insertColorRecord, Env as DbEnv } from '../lib/db-utils';
 
-// Initialize the rate limiter (NOTE: This is instance-local, not global)
-const limiter = new RateLimiter(30); // Allows 30 POST requests per second *per Worker instance*
+// Import the HTML template content as a string
+import pageTemplate from './template.html?raw';
 
+// --- Environment Interface ---
+// Use the Env interface exported from db-utils, assuming it contains all needed vars
+type Env = DbEnv;
+
+// --- Globals / Initialization ---
+// Initialize the rate limiter (instance-local)
+const limiter = new RateLimiter(30);
+
+// --- Worker Definition ---
 export default {
-  // Update signature to include Env and ExecutionContext
+  /**
+   * Handles incoming HTTP requests.
+   */
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 
     const url = new URL(request.url);
 
-    // Handle POST requests for logging color changes
+    // --- Handle POST requests for logging color changes ---
     if (request.method === "POST" && url.pathname === '/') {
       try {
-        // Validate Content-Type for safety
+        // Validate Content-Type
         if (request.headers.get("Content-Type") !== "application/json") {
           return new Response("Bad Request: Expected Content-Type application/json", { status: 400 });
         }
 
-        const data: any = await request.json();
+        // Parse and validate incoming JSON data
+        interface IncomingColorData {
+          color: string;
+          trace_id: string;
+          source: string;
+        }
+        const data: IncomingColorData = await request.json();
 
-        // Basic validation of incoming data
-        // ** Important Fix for Color Format Mismatch **
-        // We expect HEX color from the client now. Add validation if needed.
-        if (!data || typeof data.color !== 'string' || !data.color.startsWith('#') || typeof data.trace_id !== 'string' || typeof data.source !== 'string') {
+        // Basic validation
+        if (!data || typeof data.color !== 'string' || !data.color.startsWith('#') ||
+          typeof data.trace_id !== 'string' || typeof data.source !== 'string') {
           console.error("Received invalid data structure or color format:", data);
           return new Response("Bad Request: Invalid data payload or color format (expected HEX starting with #)", { status: 400 });
         }
 
-        const tableName = getCurrentTableName();
-
-        // NOTE: This rate limiter is instance-local. In a high-traffic scenario,
-        // the total rate across all Cloudflare edge locations might exceed this limit.
-        // For strict global rate limiting, consider using KV or Durable Objects.
+        // Apply rate limiting
         if (limiter.canProceed()) {
-          // Use ctx.waitUntil to perform database operations asynchronously
-          // This allows the response to be sent back to the client faster.
+          // Prepare data object for insertColorRecord
+          const colorDataToInsert = {
+            color: data.color,
+            trace_id: data.trace_id,
+            source: data.source
+          };
+
+          // Use ctx.waitUntil for async DB operation
           ctx.waitUntil(
             (async () => {
               try {
-                // Pass env to database utility functions
-                await ensureMonthlyTableAndRestApi(tableName, env);
-                // Pass the validated HEX color
-                await insertColorRecord(tableName, data.color, data.trace_id, data.source, env);
+                // Call the refactored insertColorRecord function
+                await insertColorRecord(colorDataToInsert, env);
               } catch (dbError) {
-                // Log database errors happening in the background
                 console.error(`Database operation failed for trace ${data.trace_id}:`, dbError);
-                // Consider sending errors to an external monitoring service here
               }
             })()
           );
+
+          // Return OK immediately
+          return new Response("OK", { status: 200 });
+
         } else {
-          // Log rate limit events if desired
           console.log(`Rate limit exceeded for trace ${data.trace_id}`);
-          // Return 429 Too Many Requests
           return new Response("Too Many Requests", { status: 429 });
         }
 
-        // Return OK immediately if rate limit allows and waitUntil is used
-        return new Response("OK", { status: 200 });
-
       } catch (e) {
-        // Catch JSON parsing errors or other synchronous errors
         console.error("Error processing POST request:", e);
-        // Avoid leaking detailed error messages in production if possible
         return new Response("Bad Request", { status: 400 });
       }
     }
 
-    // Handle GET requests to serve the HTML page
+    // --- Handle GET requests to serve the HTML page ---
     if (request.method === "GET" && url.pathname === '/') {
-      const traceId = generateTraceId(); // Generate trace ID for this page load/session
-      const colorHex = generateRandomColorHex(); // Initial color (HEX)
+      const traceId = generateTraceId(); // Generate trace ID for this specific request/page load
+      const colorHex = generateRandomColorHex(); // Generate initial color
 
-      // --- HTML Start ---
-      const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${colorHex}</title>
-<style>
-body { margin: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background-color: ${colorHex}; transition: background-color 0.8s; font-family: sans-serif; cursor: pointer; /* Add cursor pointer to indicate clickability */ }
-.time-display { font-size: clamp(1.5rem, 4vw, 2rem); color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); margin: 5px 0; }
-.timestamp-display { position: fixed; bottom: 1rem; right: 1.5rem; font-size: clamp(0.8rem, 2vw, 1rem); color: rgba(255, 255, 255, 0.7); text-shadow: 1px 1px 1px rgba(0,0,0,0.5); }
-</style>
-<link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22${colorHex.replace('#', '%23')}%22/></svg>">
-</head>
-<body>
-<div id="time-utc" class="time-display">Loading UTC…</div>
-<div id="time-utc8" class="time-display">Loading UTC+8…</div>
-<div id="linux-timestamp" class="timestamp-display">Loading Timestamp…</div>
+      // Replace placeholders in the imported HTML template content
+      let htmlContent = pageTemplate
+        .replaceAll('__COLOR_HEX__', colorHex)
+        // Ensure '#' in color is properly encoded for use in SVG data URI
+        .replaceAll('__COLOR_HEX_URL_ENCODED__', colorHex.replace('#', '%23'))
+        .replaceAll('__TRACE_ID__', traceId);
 
-<script>
-  const initialTraceId = "${traceId}"; // Use the traceId generated by the worker
-
-  // **** Helper Function: Convert HSL to HEX ****
-  // (Source: Slightly modified from various sources like https://stackoverflow.com/a/9493060)
-  function hslToHex(h, s, l) {
-	l /= 100;
-	const a = s * Math.min(l, 1 - l) / 100;
-	const f = n => {
-	  const k = (n + h / 30) % 12;
-	  const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-	  return Math.round(255 * color).toString(16).padStart(2, '0'); // Convert to Hex and pad
-	};
-	return \`#\${f(0)}\${f(8)}\${f(4)}\`;
-  }
-
-  // Function to send color change data to the backend (now sends HEX)
-  async function sendColorChange(hexColor, sourceType) {
-	const eventTraceId = crypto.randomUUID();
-	try {
-	  const response = await fetch('/', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		// Send HEX color
-		body: JSON.stringify({ color: hexColor, trace_id: eventTraceId, source: sourceType })
-	  });
-	  if (!response.ok) {
-		console.error('Failed to send color change:', response.status, await response.text());
-	  }
-	} catch (e) {
-	  console.error('Error sending color change:', e);
-	}
-  }
-
-  // Function to update time displays
-  function updateTimeDisplays() {
-	const now = new Date();
-	const utcTime = now.toISOString().split('.')[0].replace('T', ' ');
-	const cnTime = new Date(now.getTime() + 8 * 3600 * 1000).toISOString().split('.')[0].replace('T', ' ');
-
-	document.getElementById('time-utc').textContent = utcTime + ' UTC';
-	document.getElementById('time-utc8').textContent = cnTime + ' UTC+8';
-	document.getElementById('linux-timestamp').textContent = 'TS: ' + Math.floor(now.getTime() / 1000);
-  }
-
-  // Function to generate random HSL components (client-side)
-  function generateRandomHslComponents() {
-	const h = Math.floor(Math.random() * 360);
-	const s = Math.floor(Math.random() * 20 + 70); // Saturation 70-90%
-	const l = Math.floor(Math.random() * 20 + 40); // Lightness 40-60%
-	return { h, s, l };
-  }
-
-  // Function to apply color (using HEX) and update favicon (using HEX)
-  function applyColor(hexColor) {
-	document.body.style.backgroundColor = hexColor;
-	// Update favicon using HEX color
-	const svgFavicon = \`data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22\${hexColor.replace('#','%23')}%22/></svg>\`;
-	document.getElementById('favicon').setAttribute('href', svgFavicon);
-  }
-
-  // Initial time update and interval setup
-  updateTimeDisplays();
-  setInterval(updateTimeDisplays, 1000);
-
-  // Function to handle color change logic
-  function changeColor(sourceType) {
-	const { h, s, l } = generateRandomHslComponents();
-	const newHexColor = hslToHex(h, s, l); // Convert to HEX
-	applyColor(newHexColor);
-	sendColorChange(newHexColor, sourceType); // Send HEX
-  }
-
-  // Automatic color change interval (every 5 seconds)
-  setInterval(() => {
-	if (new Date().getSeconds() % 5 === 0) {
-	  changeColor('a'); // 'a' for automatic
-	}
-  }, 1000);
-
-  // Click event listener attached to the body for manual color change
-  document.body.addEventListener('click', () => {
-	changeColor('c'); // 'c' for click
-  });
-
-  // Send the initial color generated by the server (already HEX)
-  setTimeout(() => {
-	 sendColorChange("${colorHex}", 'i'); // 'i' for initial server-generated color
-  }, 100);
-
-</script>
-</body>
-</html>
-	`.trim();
-      // --- HTML End ---
-
-      return new Response(html, {
+      // Return the processed HTML
+      return new Response(htmlContent, {
         headers: {
           "Content-Type": "text/html; charset=UTF-8",
           "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
@@ -209,7 +111,16 @@ body { margin: 0; display: flex; flex-direction: column; justify-content: center
       });
     }
 
-    // Default response for other methods/paths
+    // --- Default response for other methods/paths ---
     return new Response("Not Found", { status: 404 });
-  }
+  },
+
+  /**
+   * Handles scheduled events (Cron Triggers).
+   * TODO: Implement Db2 keep-alive logic here when ready.
+   */
+  // async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+  //   console.log(`Cron Trigger Fired: ${event.cron}`);
+  //   // Add Db2 ping logic here later
+  // }
 };
