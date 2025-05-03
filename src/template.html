@@ -11,24 +11,41 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
+      /* 主轴（垂直）居中 */
       align-items: center;
-      height: 100vh;
+      /* 交叉轴（水平）居中 */
+      min-height: 100vh;
+      /* 确保 body 至少占满整个视口高度 */
       background-color: __COLOR_HEX__;
       transition: background-color 0.8s;
       font-family: sans-serif;
       cursor: pointer;
+      text-align: center;
+      /* 让内部文本也默认居中 */
+      /* --- ADD CSS START --- */
+      gap: 0.5em;
+      /* 替代 time-display 的 margin，提供间隙 */
+      /* --- ADD CSS END --- */
     }
 
-    /* Placeholder */
     .time-display {
       font-size: clamp(1.5rem, 4vw, 2rem);
+      /* 响应式字体大小 */
       color: white;
       text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-      margin: 5px 0;
+      /* --- MODIFY CSS START --- */
+      margin: 0;
+      /* 移除上下 margin */
+      padding: 0.1em 0;
+      /* 可以加一点微小的上下 padding 改善观感 */
+      /* width: auto; */
+      /* 宽度自动，由 flex 容器处理居中 */
+      line-height: 1.2;
+      /* 可以微调行高 */
+      /* --- MODIFY CSS END --- */
     }
 
-    /* timestamp-display class is no longer needed */
-    /* .timestamp-display { position: fixed; bottom: 1rem; right: 1.5rem; font-size: clamp(0.8rem, 2vw, 1rem); color: rgba(255, 255, 255, 0.7); text-shadow: 1px 1px 1px rgba(0,0,0,0.5); } */
+    /* Favicon link stays the same (square) */
   </style>
   <link id="favicon" rel="icon"
     href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22__COLOR_HEX_URL_ENCODED__%22/></svg>">
@@ -37,104 +54,31 @@
 <body>
   <div id="time-utc" class="time-display">Loading UTC+0…</div>
   <div id="time-utc8" class="time-display">Loading UTC+8…</div>
+
   <script>
-    // Use placeholder for trace ID, will be replaced by Worker
+    // JavaScript 部分保持不变...
     const initialTraceId = "__TRACE_ID__";
-    // 直接获取服务器端注入的初始颜色HEX值
-    const initialServerColor = "__INITIAL_COLOR_HEX__"; // 由Worker替换
+    const initialServerColor = "__INITIAL_COLOR_HEX__";
 
-    // **** Helper Function: Convert HSL to HEX ****
-    function hslToHex(h, s, l) {
-      l /= 100;
-      const a = s * Math.min(l, 1 - l) / 100;
-      const f = n => {
-        const k = (n + h / 30) % 12;
-        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-        return Math.round(255 * color).toString(16).padStart(2, '0'); // Convert to Hex and pad
-      };
-      return `#${f(0)}${f(8)}${f(4)}`;
-    }
+    function hslToHex(h, s, l) { /* ... */ l /= 100; const a = s * Math.min(l, 1 - l) / 100; const f = n => { const k = (n + h / 30) % 12; const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1); return Math.round(255 * color).toString(16).padStart(2, '0'); }; return `#${f(0)}${f(8)}${f(4)}`; }
 
-    // Function to send color change data to the backend
-    async function sendColorChange(hexColor, sourceType) {
-      const eventTraceId = crypto.randomUUID(); // Use browser crypto for client-side trace
-      try {
-        const response = await fetch('/', { // POSTs back to the same Worker URL
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          // Send HEX color and trace ID
-          body: JSON.stringify({ color: hexColor, trace_id: eventTraceId, source: sourceType })
-        });
-        if (!response.ok) {
-          console.error('Failed to send color change:', response.status, await response.text());
-        }
-      } catch (e) {
-        console.error('Error sending color change:', e);
-      }
-    }
+    async function sendColorChange(hexColor, sourceType) { const eventTraceId = crypto.randomUUID(); try { const response = await fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color: hexColor, trace_id: eventTraceId, source: sourceType }) }); if (!response.ok) { console.error('Failed to send color change:', response.status, await response.text()); } } catch (e) { console.error('Error sending color change:', e); } }
 
-    // Function to update time displays
-    function updateTimeDisplays() {
-      const now = new Date();
-      // Display UTC and UTC+8 based on client's clock, format similarly
-      const utcTimeStr = now.toISOString().substring(0, 19).replace('T', ' ');
-      const utc8Time = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-      const utc8TimeStr = utc8Time.toISOString().substring(0, 19).replace('T', ' ');
+    function updateTimeDisplays() { const now = new Date(); const utcTimeStr = now.toISOString().substring(0, 19).replace('T', ' '); const utc8Time = new Date(now.getTime() + 8 * 60 * 60 * 1000); const utc8TimeStr = utc8Time.toISOString().substring(0, 19).replace('T', ' '); document.getElementById('time-utc').textContent = utcTimeStr + ' UTC+0'; document.getElementById('time-utc8').textContent = utc8TimeStr + ' UTC+8'; }
 
-      // *** 修改 UTC 标签为 UTC+0 ***
-      document.getElementById('time-utc').textContent = utcTimeStr + ' UTC+0';
-      document.getElementById('time-utc8').textContent = utc8TimeStr + ' UTC+8';
-      // *** 移除 Linux 时间戳更新 ***
-      // document.getElementById('linux-timestamp').textContent = 'TS: ' + Math.floor(now.getTime() / 1000);
-    }
+    function generateRandomHslComponents() { const h = Math.floor(Math.random() * 360); const s = Math.floor(Math.random() * 20 + 70); const l = Math.floor(Math.random() * 20 + 40); return { h, s, l }; }
 
-    // Function to generate random HSL components (client-side)
-    function generateRandomHslComponents() {
-      const h = Math.floor(Math.random() * 360);
-      const s = Math.floor(Math.random() * 20 + 70); // Saturation 70-90%
-      const l = Math.floor(Math.random() * 20 + 40); // Lightness 40-60%
-      return { h, s, l };
-    }
+    function applyColor(hexColor) { document.body.style.backgroundColor = hexColor; const svgFavicon = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22${hexColor.replace('#', '%23')}%22/></svg>`; document.getElementById('favicon').setAttribute('href', svgFavicon); }
 
-    // Function to apply color (using HEX) and update favicon (using HEX)
-    function applyColor(hexColor) {
-      document.body.style.backgroundColor = hexColor;
-      // *** 修改 Favicon 更新: 从 circle 改为 rect (square) ***
-      const svgFavicon = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22${hexColor.replace('#', '%23')}%22/></svg>`;
-      document.getElementById('favicon').setAttribute('href', svgFavicon);
-    }
+    updateTimeDisplays(); setInterval(updateTimeDisplays, 1000);
 
-    // Initial time update and interval setup
-    updateTimeDisplays();
-    setInterval(updateTimeDisplays, 1000);
+    function changeColor(sourceType) { const { h, s, l } = generateRandomHslComponents(); const newHexColor = hslToHex(h, s, l); applyColor(newHexColor); sendColorChange(newHexColor, sourceType); }
 
-    // Function to handle color change logic
-    function changeColor(sourceType) {
-      const { h, s, l } = generateRandomHslComponents();
-      const newHexColor = hslToHex(h, s, l); // Convert to HEX
-      applyColor(newHexColor);
-      sendColorChange(newHexColor, sourceType); // Send HEX
-    }
+    setInterval(() => { if (new Date().getSeconds() % 5 === 0) { changeColor('a'); } }, 1000);
 
-    // Automatic color change interval (every 5 seconds)
-    setInterval(() => {
-      if (new Date().getSeconds() % 5 === 0) {
-        changeColor('a'); // 'a' for automatic
-      }
-    }, 1000);
+    document.body.addEventListener('click', () => { changeColor('c'); });
 
-    // Click event listener attached to the body for manual color change
-    document.body.addEventListener('click', () => {
-      changeColor('c'); // 'c' for click
-    });
-
-    // Send the initial color generated by the server (already HEX)
-    // Use a small delay to ensure page elements are ready
-    setTimeout(() => {
-      sendColorChange(initialServerColor, 'i'); // 'i' for initial server-generated color
-      document.title = initialServerColor;
-    }, 100);
-
+    setTimeout(() => { sendColorChange(initialServerColor, 'i'); document.title = initialServerColor; }, 100);
   </script>
 </body>
 
