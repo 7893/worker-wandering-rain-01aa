@@ -1,18 +1,18 @@
-// src/index.ts (最终版 - 分区表 + 记录所有信息 + 再次修正 TS 类型错误)
+// src/index.ts (最终版 - 分区表 + 记录所有信息 + 无 HMAC + 修正 TS 类型错误)
 
 // --- Imports ---
 import { generateRandomColorHex } from '../lib/color-utils';
 import { generateTraceId } from '../lib/trace-utils';
 import { RateLimiter } from '../lib/rate-limit';
-// 导入更新后的接口和函数
+// 导入分区表版本使用的接口和函数 (确保 lib/db-utils.ts 是无 HMAC 版本)
 import { insertColorRecord, Env as DbEnv, ColorRecordData } from '../lib/db-utils';
 import pageTemplate from './template.html';
 
 // --- Environment Interface ---
-type Env = DbEnv;
+type Env = DbEnv; // 从 db-utils 导入 (不含 HMAC_SHARED_SECRET)
 
 // --- Globals / Initialization ---
-const limiter = new RateLimiter(30);
+const limiter = new RateLimiter(30); // 实例本地速率限制器
 
 // --- Worker Definition ---
 export default {
@@ -26,7 +26,7 @@ export default {
     // --- 提前获取请求信息，供后续使用 ---
     const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
     const userAgent = request.headers.get('User-Agent') || 'unknown';
-    const referer = request.headers.get('Referer') || null; // Referer 可能不存在
+    const referer = request.headers.get('Referer') || null;
     const cf = request.cf; // Cloudflare 特定请求属性对象
 
     // --- Handle POST requests ---
@@ -63,17 +63,14 @@ export default {
 
         // 4. Apply Rate Limiting
         if (limiter.canProceed()) {
-          // --- *** 构建包含所有信息的完整数据对象 (使用最严格类型检查) *** ---
+          // --- 构建包含所有信息的完整数据对象 (使用最严格类型检查) ---
           const fullDataToInsert: ColorRecordData = {
-            // 来自前端的核心数据
             color: coreData.color,
             trace_id: coreData.trace_id,
             source: coreData.source,
-            // 从请求中提取的附加数据
             ip_address: clientIp,
             user_agent: userAgent,
             referer: referer,
-            // --- 最严格地检查从 request.cf 中提取数据的赋值方式 ---
             cf_country: (cf && typeof cf.country === 'string') ? cf.country : null,
             cf_colo: (cf && typeof cf.colo === 'string') ? cf.colo : null,
             cf_asn: (cf && typeof cf.asn === 'number') ? cf.asn : null,
@@ -83,9 +80,9 @@ export default {
             cf_threat_score: (cf && typeof cf.threatScore === 'number') ? cf.threatScore : null,
             cf_trust_score: (cf && typeof cf.clientTrustScore === 'number') ? cf.clientTrustScore : null
           };
-          // --- *** 数据对象构建结束 *** ---
+          // --- 数据对象构建结束 ---
 
-          // 异步调用数据库插入
+          // 异步调用数据库插入 (调用无 HMAC 版本的 insertColorRecord)
           ctx.waitUntil(
             (async () => {
               try {
@@ -139,27 +136,28 @@ export default {
     // 记录 Cron 触发事件
     console.log(`[${new Date().toISOString()}] Cron Trigger Fired: ${event.cron} - Initiating keep-alive ping.`);
 
-    // Cron 任务没有真实的请求上下文，填充特定值或 NULL
+    // Cron 任务只发送核心数据 + 必要的标识符
     const keepAliveData: ColorRecordData = {
       color: '#KEEPALV',
       trace_id: `cron-${Date.now()}-${crypto.randomUUID().substring(0, 8)}`,
-      source: 's',
-      ip_address: 'cron_trigger', // 特殊标记
-      user_agent: 'cloudflare-cron', // 标记来源
-      referer: null,
-      cf_country: null,
-      cf_colo: null,
-      cf_asn: null,
-      cf_http_protocol: null,
-      cf_tls_cipher: null,
-      cf_tls_version: null,
-      cf_threat_score: null,
-      cf_trust_score: null
+      source: 's', // 's' 代表 scheduled/system
+      // 其他字段让其在数据库中默认为 NULL 或由 PL/SQL 处理
+      ip_address: 'cron_trigger',
+      user_agent: 'cloudflare-cron'
+      // referer: null, // 可省略，默认为 null
+      // cf_country: null, // 可省略
+      // cf_colo: null, // 可省略
+      // cf_asn: null, // 可省略
+      // cf_http_protocol: null, // 可省略
+      // cf_tls_cipher: null, // 可省略
+      // cf_tls_version: null, // 可省略
+      // cf_threat_score: null, // 可省略
+      // cf_trust_score: null // 可省略
     };
 
-    console.log(`Keep-alive ping data: ${JSON.stringify(keepAliveData)}`);
+    console.log(`Keep-alive ping data (minimal required): ${JSON.stringify(keepAliveData)}`);
 
-    // 异步执行数据库插入
+    // 异步执行数据库插入 (调用无 HMAC 版本的 insertColorRecord)
     ctx.waitUntil(
       (async () => {
         try {
