@@ -10,7 +10,7 @@ ORDS_API_PATH = "api/v1/colors"
 DB_USER = "ADMIN"
 
 [triggers]
-crons = ["5 4 * * *"]
+crons = ["* * * * *"]
 
 [observability.logs]
 enabled = false
