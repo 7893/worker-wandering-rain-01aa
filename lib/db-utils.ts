@@ -32,7 +32,6 @@ interface ColorRecordData {
  */
 export async function insertColorRecord(colorData: ColorRecordData, env: Env): Promise<void> {
     // 1. 构建 URL
-    // 添加检查避免 undefined.replace 报错，并在出错时给默认值或在后面抛错
     const baseUrl = env.ORDS_BASE_URL ? env.ORDS_BASE_URL.replace(/\/$/, '') : '';
     const schemaPath = env.ORDS_SCHEMA_PATH ? env.ORDS_SCHEMA_PATH.replace(/^\/|\/$/g, '') : '';
     const apiPath = env.ORDS_API_PATH ? env.ORDS_API_PATH.replace(/^\//, '') : '';
@@ -40,7 +39,7 @@ export async function insertColorRecord(colorData: ColorRecordData, env: Env): P
     // 使用字符串连接构造 URL
     const apiUrl = baseUrl + '/' + schemaPath + '/' + apiPath;
 
-    // 增加一个对最终 URL 的基本检查
+    // 增加对最终 URL 的基本检查
     if (!baseUrl || !schemaPath || !apiPath || !apiUrl.startsWith("https://")) {
         console.error("Failed to construct a valid ORDS API URL from environment variables.", { baseUrl, schemaPath, apiPath });
         throw new Error("Invalid ORDS API URL configuration.");
@@ -111,6 +110,7 @@ export async function insertColorRecord(colorData: ColorRecordData, env: Env): P
             console.error(`HMAC verification likely failed at ORDS. Status: ${status} ${statusText}. Trace: ${colorData.trace_id}`, { apiUrl, responseBody: errorBody });
             throw new Error(`HMAC verification failed or forbidden by ORDS: ${status} ${statusText}`);
         } else {
+            // 其他类型的 ORDS 或数据库错误
             console.error(`Failed to insert color record (HMAC enabled). Status: ${status} ${statusText}. Trace: ${colorData.trace_id}`, { apiUrl, responseBody: errorBody });
             throw new Error(`Failed to insert color record via ORDS (HMAC enabled): ${status} ${statusText}`);
         }
@@ -119,3 +119,4 @@ export async function insertColorRecord(colorData: ColorRecordData, env: Env): P
         console.log(`Color record processed successfully by ORDS (HMAC enabled) for trace_id: ${colorData.trace_id}. Status: ${response.status}`);
     }
 }
+
