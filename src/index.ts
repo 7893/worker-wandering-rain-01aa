@@ -1,4 +1,4 @@
-// src/index.ts (最终版 - 分区表 + 记录所有信息 + 无 HMAC + 修正 TS 类型错误)
+// src/index.ts (最终版 - 分区表 + 记录所有信息 + 无 HMAC + 修正 TS + 简化 Cron 数据)
 
 // --- Imports ---
 import { generateRandomColorHex } from '../lib/color-utils';
@@ -82,14 +82,12 @@ export default {
           };
           // --- 数据对象构建结束 ---
 
-          // 异步调用数据库插入 (调用无 HMAC 版本的 insertColorRecord)
+          // 异步调用数据库插入
           ctx.waitUntil(
             (async () => {
               try {
                 await insertColorRecord(fullDataToInsert, env);
-              } catch (dbError: any) {
-                // 错误已在 insertColorRecord 内部记录
-              }
+              } catch (dbError: any) { } // 错误已在内部记录
             })()
           );
           // 立即返回 OK
@@ -136,34 +134,28 @@ export default {
     // 记录 Cron 触发事件
     console.log(`[${new Date().toISOString()}] Cron Trigger Fired: ${event.cron} - Initiating keep-alive ping.`);
 
-    // Cron 任务只发送核心数据 + 必要的标识符
-    const keepAliveData: ColorRecordData = {
-      color: '#KEEPALV',
-      trace_id: `cron-${Date.now()}-${crypto.randomUUID().substring(0, 8)}`,
-      source: 's', // 's' 代表 scheduled/system
-      // 其他字段让其在数据库中默认为 NULL 或由 PL/SQL 处理
-      ip_address: 'cron_trigger',
-      user_agent: 'cloudflare-cron'
-      // referer: null, // 可省略，默认为 null
-      // cf_country: null, // 可省略
-      // cf_colo: null, // 可省略
-      // cf_asn: null, // 可省略
-      // cf_http_protocol: null, // 可省略
-      // cf_tls_cipher: null, // 可省略
-      // cf_tls_version: null, // 可省略
-      // cf_threat_score: null, // 可省略
-      // cf_trust_score: null // 可省略
+    // --- *** 修改：只发送后端必需的核心字段 *** ---
+    const keepAliveData = {
+      color: '#KEEPALV', // 固定颜色值
+      trace_id: `cron-${Date.now()}-${crypto.randomUUID().substring(0, 8)}`, // 唯一追踪 ID
+      source: 's' // 's' 代表 scheduled/system
+      // 不再发送 ip_address, user_agent, referer, cf_* 等字段
+      // 后端 PL/SQL 的 JSON_VALUE(... NULL ON EMPTY) 会将这些解析为 NULL
     };
+    // --- *** 修改结束 *** ---
 
-    console.log(`Keep-alive ping data (minimal required): ${JSON.stringify(keepAliveData)}`);
+    console.log(`Keep-alive ping data (CORE FIELDS ONLY): ${JSON.stringify(keepAliveData)}`);
 
-    // 异步执行数据库插入 (调用无 HMAC 版本的 insertColorRecord)
+    // 异步执行数据库插入
     ctx.waitUntil(
       (async () => {
         try {
-          await insertColorRecord(keepAliveData, env);
+          // 类型断言，因为我们发送的对象缺少 ColorRecordData 中的可选字段
+          // 但 insertColorRecord 函数内部 JSON.stringify 会正确处理
+          await insertColorRecord(keepAliveData as ColorRecordData, env);
         } catch (dbError: any) {
-          console.error(`[CRON_ERROR] Keep-alive task failed for trace ${keepAliveData.trace_id}.`);
+          // 错误已在 insertColorRecord 内部记录，这里只记录 Cron 任务本身的失败
+          console.error(`[CRON_ERROR] Keep-alive task failed for trace ${keepAliveData.trace_id}. Error occurred during insertColorRecord call.`);
         }
       })()
     );
