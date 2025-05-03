@@ -1,35 +1,26 @@
-# Worker Wandering Rain 01aa
+# Worker Wandering Rain (worker-wandering-rain-01aa)
 
-一个基于 Cloudflare Worker + Oracle Autonomous Database 的高质量项目，  
-实时生成随机背景色，记录到数据库，同时保持极致轻量、极致模块化的现代工程范式。
+Cloudflare Worker + Oracle DB 项目：展示随机背景色，并按月自动创建表记录颜色变化。
 
----
+## 功能
 
-## 项目概览
+* 访问 Worker URL 显示随机颜色。
+* 颜色自动/点击刷新。
+* 颜色数据通过 ORDS 存入 Oracle DB (表 `cw_YYYYMM_colors` 会自动按月创建)。
 
-- **自动建表**（按月动态创建 Oracle 表）
-- **自动注册 REST API**（通过 ORDS 自动开放接口）
-- **高精度时间戳**（Oracle SYSTIMESTAMP）
-- **支持每秒30条并发写入**（防止暴力插入）
-- **事件追踪（trace_id）**（便于日志关联）
-- **简洁优雅的网页展示**（全响应式，无卡顿）
-- **极低维护成本**（纯Serverless，0人工干预）
-- **日志推送已开启**（方便后期接入 Axiom、Sentry 等）
+## 技术
 
----
+* Cloudflare Workers (TypeScript)
+* Oracle Autonomous DB + ORDS (PL/SQL)
+* pnpm
+* GitHub Actions (自动部署)
 
-## 目录结构
+## 运行与部署
 
-```plaintext
-.
-├── lib
-│   ├── color-utils.ts    # 随机颜色生成工具
-│   ├── db-utils.ts       # 动态建表、插入数据
-│   ├── rate-limit.ts     # 每秒30条限流控制
-│   ├── time-utils.ts     # 获取当前月份表名
-│   └── trace-utils.ts    # 生成全局唯一trace_id
-├── src
-│   └── index.ts          # Worker 主入口逻辑
-├── package.json
-└── wrangler.toml         # Worker 配置文件
-
+1.  **环境:** Node.js (v22+), pnpm (v10+)
+2.  **安装依赖 (用于编辑器):** `pnpm install`
+3.  **配置:**
+    * `wrangler.toml` (Cloudflare account_id, ORDS vars)
+    * Cloudflare Secrets (e.g., `DB_PASSWORD`)
+    * GitHub Secrets (e.g., `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`)
+4.  **部署:** 推送代码到 `main` 分支即可通过 GitHub Actions 自动部署。
