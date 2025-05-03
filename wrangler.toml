@@ -1,18 +1,28 @@
-name = "worker-wandering-rain-01aa"
-main = "src/index.ts"
-compatibility_date = "2025-05-02"
+# ... 您现有的 wrangler.toml 配置 ...
+# 例如:
+# name = "worker-wandering-rain-01aa"
+# main = "src/index.ts"
+# compatibility_date = "YYYY-MM-DD"
+# account_id = "YOUR_ACCOUNT_ID"
+#
+# [vars]
+# ORDS_BASE_URL = "..."
+# ORDS_SCHEMA_PATH = "..."
+# ORDS_API_PATH = "..."
+# DB_USER = "..."
+#
+# [[kv_namespaces]] # 如果您用了 KV
+# binding = "MY_KV"
+# id = "..."
 
-[build]
-rules = [
-  { type = "Text", globs = ["**/*.html"], fallthrough = true }
-]
+# --- ADD Triggers Section START ---
+[triggers]
+# 设置一个低频的 Cron 表达式来触发 scheduled 函数
+# 示例：每天凌晨 4:05 UTC 执行一次 (0-59 min, 0-23 hour, 1-31 day_of_month, 1-12 month, 0-6 day_of_week)
+# 您可以根据需要调整频率，但为了保活，每天一次或两次通常足够
+cron = "5 4 * * *"
+# --- ADD Triggers Section END ---
 
-[vars]
-DB_USER = "ADMIN"
-ORDS_BASE_URL = "https://W9CIGS8AX3PONZM-IOFTNBQU5K6ZB6EA.adb.ap-tokyo-1.oraclecloudapps.com" # <-- 已更新为正确的长主机名 URL!
-ORDS_SCHEMA_PATH = "ords/admin"
-ORDS_API_PATH = "api/v1/colors"
-# 再次提醒: 不要在这里添加 DB_PASSWORD 或 HMAC_SHARED_SECRET
-
-[observability.logs]
-enabled = true
+# 注意: 如果您有不同的环境 (例如 [env.production])，
+# 您可能需要在相应的环境配置下也添加 [triggers] 或确保它继承顶级配置。
+# 免费计划通常只支持一个 Cron 触发器。
