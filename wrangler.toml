@@ -1,28 +1,31 @@
-# ... 您现有的 wrangler.toml 配置 ...
-# 例如:
-# name = "worker-wandering-rain-01aa"
-# main = "src/index.ts"
-# compatibility_date = "YYYY-MM-DD"
-# account_id = "YOUR_ACCOUNT_ID"
-#
-# [vars]
-# ORDS_BASE_URL = "..."
-# ORDS_SCHEMA_PATH = "..."
-# ORDS_API_PATH = "..."
-# DB_USER = "..."
-#
-# [[kv_namespaces]] # 如果您用了 KV
-# binding = "MY_KV"
-# id = "..."
+# wrangler.toml - 完整配置文件示例
 
-# --- ADD Triggers Section START ---
+# 主配置段：Worker 名称、入口文件、兼容性日期和账户 ID
+name = "worker-wandering-rain-01aa" # 您的 Worker 服务名称
+main = "src/index.ts"             # Worker 的入口脚本文件路径 (必须)
+compatibility_date = "2024-05-03" # 建议使用较新的日期以启用新功能，请根据需要调整
+account_id = "ed3e4f0448b71302675f2b436e5e8dd3" # <-- *** 替换为您 Cloudflare 账户 ID *** (部署时通常需要)
+
+# 环境变量：非敏感信息可以放在这里
+# 敏感信息（如密码、密钥）应使用 wrangler secret put 命令设置
+[vars]
+ORDS_BASE_URL = "https://W9CIGS8AX3PONZM-IOFTNBQU5K6ZB6EA.adb.ap-tokyo-1.oraclecloudapps.com"           # <-- *** 替换为您的 ORDS 基础 URL, 例如 "https://adb.oraclecloud.com" ***
+ORDS_SCHEMA_PATH = "ords/admin"     # <-- *** 替换为您的 ORDS Schema 路径, 例如 "ords/admin" ***
+ORDS_API_PATH = "api/v1/colors"           # <-- *** 替换为您的 ORDS API 路径, 例如 "api/v1/colors" ***
+DB_USER = "ADMIN"                 # <-- *** 替换为您的数据库用户名, 例如 "ADMIN" ***
+
+# Cron 触发器配置：用于数据库保活
 [triggers]
-# 设置一个低频的 Cron 表达式来触发 scheduled 函数
-# 示例：每天凌晨 4:05 UTC 执行一次 (0-59 min, 0-23 hour, 1-31 day_of_month, 1-12 month, 0-6 day_of_week)
-# 您可以根据需要调整频率，但为了保活，每天一次或两次通常足够
+# 使用 crons = ["..."] 数组格式
+# 示例：每天凌晨 4:05 UTC 执行一次
 crons = ["5 4 * * *"]
-# --- ADD Triggers Section END ---
 
-# 注意: 如果您有不同的环境 (例如 [env.production])，
-# 您可能需要在相应的环境配置下也添加 [triggers] 或确保它继承顶级配置。
-# 免费计划通常只支持一个 Cron 触发器。
+# 如果您有其他配置，例如 KV 命名空间绑定 [[kv_namespaces]] 等，可以继续添加在这里。
+# 例如:
+# [[kv_namespaces]]
+# binding = "MY_KV_BINDING"
+# id = "YOUR_KV_NAMESPACE_ID"
+
+# 注意：数据库密码 (DB_PASSWORD) 和 HMAC 密钥 (HMAC_SHARED_SECRET)
+# 必须通过 `wrangler secret put <SECRET_NAME>` 命令安全地设置，
+# 不能直接写在 wrangler.toml 文件中。
