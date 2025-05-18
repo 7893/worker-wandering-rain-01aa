@@ -12,30 +12,26 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    /* If NOT transpiling with webpack/esbuild, ensure experimentalDecorators is enabled for functions */
-    // "experimentalDecorators": true,
     /* Module Resolution Options: */
     "module": "ESNext",
-    "moduleResolution": "Bundler", // 使用 "Bundler" 或 "NodeNext" 配合 "module": "ESNext"
-    // "baseUrl": ".", // 如果需要配置路径别名
-    /* Source Map Options: */
-    // "sourceMap": true, // 如果需要 source map
-    // "outDir": "dist", // 输出目录，wrangler 通常不需要这个
+    "moduleResolution": "Bundler",
     /* Cloudflare Workers Types */
     "types": [
-      "@cloudflare/workers-types" // <--- 确保包含 Workers 类型
+      "@cloudflare/workers-types"
     ],
     /* Library Options: */
     "lib": [
-      "ESNext" // 通常需要 ESNext
+      "ESNext",
+      "WebWorker" // 添加 WebWorker 以更好地支持 console, fetch, Response, btoa 等
     ]
   },
   "include": [
-    "src/**/*.ts", // 包含 src 目录下的所有 .ts 文件
-     "test/**/*.ts" // 如果有测试目录，也包含进来
-    ], // 指定要编译的文件
+    "src/**/*.ts",
+    "lib/**/*.ts", // <--- 添加此行以包含 lib 目录
+    "test/**/*.ts"
+  ],
   "exclude": [
-    "node_modules", // 排除 node_modules
-    "dist" // 排除输出目录（如果设置了 outDir）
-    ]
+    "node_modules",
+    "dist"
+  ]
 }
