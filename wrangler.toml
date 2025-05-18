@@ -1,42 +1,17 @@
 # wrangler.toml
 
-name = "worker-wandering-rain-01aa" # 您的 Worker 名称
-main = "src/index.ts"                # Worker 的入口文件
+name = "worker-wandering-rain-01aa"
+main = "src/index.ts"
+compatibility_date = "2023-10-30" # 或者您选择的更新日期
 
-# 请确保这个日期与您项目初始化或 Cloudflare 的建议保持一致
-# 例如: "2024-05-01"
-compatibility_date = "2023-10-30"  # 您可以根据需要更新此日期
-
-# [vars] 部分定义了非敏感的环境变量
-# 这些变量的值会在 Worker 运行时从您在 Cloudflare Dashboard 中设置的“环境变量”绑定中获取
-# 或者，如果 CI/CD 流程中通过 wrangler deploy --var KEY=VALUE 设置，则从那里获取
-# 这里列出它们是为了清晰地表明 Worker 代码期望这些变量存在
 [vars]
 ORDS_BASE_URL = "https://w9cigs8ax3ponzm-ioftnbqu5k6zb6ea.adb.ap-tokyo-1.oraclecloudapps.com/ords"
 ORDS_SCHEMA_PATH = "admin"
 ORDS_API_PATH = "colorevents"
 DB_USER = "ADMIN"
 
-# Cron Triggers 配置
-# 设置为最低频率：每分钟执行一次，方便测试
+# Cron Triggers 配置 (修正后的格式)
 [triggers]
-cron = "* * * * *" # 每分钟的每一秒，每小时的每一分钟，每天的每小时，每月的每天，每周的每一天
+crons = ["* * * * *"] # 每分钟执行一次
 
-# -----------------------------------------------------------------------------
-# 重要说明关于 SECRETS (例如 DB_PASSWORD):
-# -----------------------------------------------------------------------------
-# 敏感信息如 DB_PASSWORD 必须作为 SECRETS 进行管理。
-# 您需要通过 Cloudflare Dashboard (Workers & Pages > 您的 Worker > Settings > Variables > Secrets)
-# 或者通过 Wrangler CLI 命令 `npx wrangler secret put DB_PASSWORD` 来设置它们。
-#
-# Worker 代码 (src/index.ts 和 lib/db-utils.ts) 会通过 env.DB_PASSWORD 来访问这个 Secret。
-# wrangler.toml 文件本身不应包含实际的 Secret 值。
-#
-# 例如，在您的 lib/db-utils.ts 中，Env 接口定义了 DB_PASSWORD：
-# export interface Env {
-#     // ...
-#     DB_PASSWORD: string; // 这个值将从 Cloudflare Secrets 注入
-# }
-#
-# 这确保了密码不会被提交到代码库中。
-# -----------------------------------------------------------------------------
+# ... (关于 DB_PASSWORD Secret 的说明不变) ...
