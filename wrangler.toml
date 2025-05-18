@@ -2,7 +2,7 @@
 
 name = "worker-wandering-rain-01aa"
 main = "src/index.ts"
-compatibility_date = "2023-10-30" # 或者您选择的更新日期
+compatibility_date = "2023-10-30" # 您可以根据 Cloudflare 文档更新到更近的日期
 
 [vars]
 ORDS_BASE_URL = "https://w9cigs8ax3ponzm-ioftnbqu5k6zb6ea.adb.ap-tokyo-1.oraclecloudapps.com/ords"
@@ -10,8 +10,7 @@ ORDS_SCHEMA_PATH = "admin"
 ORDS_API_PATH = "colorevents"
 DB_USER = "ADMIN"
 
-# Cron Triggers 配置 (修正后的格式)
 [triggers]
-crons = ["* * * * *"] # 每分钟执行一次
+crons = ["* * * * *"] # 每分钟执行一次 (用于测试，生产环境应降低频率)
 
-# ... (关于 DB_PASSWORD Secret 的说明不变) ...
+# DB_PASSWORD 必须作为 Secret 设置，例如通过 `npx wrangler secret put DB_PASSWORD`

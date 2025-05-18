@@ -22,12 +22,12 @@
     /* Library Options: */
     "lib": [
       "ESNext",
-      "WebWorker" // 添加 WebWorker 以更好地支持 console, fetch, Response, btoa 等
+      "WebWorker"
     ]
   },
   "include": [
     "src/**/*.ts",
-    "lib/**/*.ts", // <--- 添加此行以包含 lib 目录
+    "lib/**/*.ts",
     "test/**/*.ts"
   ],
   "exclude": [
