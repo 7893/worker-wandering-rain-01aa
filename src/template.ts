@@ -63,7 +63,7 @@ const pageTemplate = `<!DOCTYPE html>
     // const initialTraceId = "__TRACE_ID__"; // Currently unused on client side
     const initialServerColor = "__INITIAL_COLOR_HEX__";
 
-    function hslToHex(h, s, l) { /* ... */ l /= 100; const a = s * Math.min(l, 1 - l) / 100; const f = n => { const k = (n + h / 30) % 12; const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1); return Math.round(255 * color).toString(16).padStart(2, '0'); }; return ` + "`" + `#${f(0)}${f(8)}${f(4)}` + "`" + `; }
+    function hslToHex(h, s, l) { l /= 100; const a = s * Math.min(l, 1 - l) / 100; const f = n => { const k = (n + h / 30) % 12; const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1); return Math.round(255 * color).toString(16).padStart(2, '0'); }; return '#' + f(0) + f(8) + f(4); }
 
     async function sendColorChange(hexColor, sourceType) { const eventTraceId = crypto.randomUUID(); try { const response = await fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color: hexColor, trace_id: eventTraceId, source: sourceType }) }); if (!response.ok) { console.error('Failed to send color change:', response.status, await response.text()); } } catch (e) { console.error('Error sending color change:', e); } }
 
@@ -71,7 +71,7 @@ const pageTemplate = `<!DOCTYPE html>
 
     function generateRandomHslComponents() { const h = Math.floor(Math.random() * 360); const s = Math.floor(Math.random() * 20 + 70); const l = Math.floor(Math.random() * 20 + 40); return { h, s, l }; }
 
-    function applyColor(hexColor) { document.body.style.backgroundColor = hexColor; const svgFavicon = ` + "`" + `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22${hexColor.replace('#', '%23')}%22/></svg>` + "`" + `; document.getElementById('favicon').setAttribute('href', svgFavicon); }
+    function applyColor(hexColor) { document.body.style.backgroundColor = hexColor; const svgFavicon = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="' + hexColor.replace('#', '%23') + '"/></svg>'; document.getElementById('favicon').setAttribute('href', svgFavicon); }
 
     updateTimeDisplays(); setInterval(updateTimeDisplays, 1000);
 

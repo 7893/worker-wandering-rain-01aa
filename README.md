@@ -28,16 +28,19 @@ npx wrangler login
 npx wrangler secret put DB_PASSWORD
 ```
 
-3) Deploy
+3) Deploy (Free-plan safe path)
 
 ```
+export CF_ACCOUNT_ID=your_account_id
+export CF_API_TOKEN=your_api_token
 pnpm deploy
 ```
 
 The Worker will be available at your `*.workers.dev` URL. To use a custom domain on the Free plan, add a Route in Workers and ensure your zone’s DNS is proxied through Cloudflare.
 
 Notes:
-- If you use the included GitHub Actions workflow, it uploads the bundle via the Cloudflare API and separately ensures the cron schedule is set. This avoids extra script-settings calls while still enabling the `scheduled` event.
+- The provided deploy uses a dry-run build + direct API upload to avoid Wrangler calling script-settings (Logpush), which can fail on Free plans with certain account settings.
+- The included GitHub Actions workflow mirrors this and ensures the cron schedule is set via API.
 
 ## Cloudflare 免费套餐使用指南（2025-09 已核对官方文档）
 
@@ -64,6 +67,7 @@ Notes:
 - 观测/日志
   - 本项目 `wrangler.toml` 中 `[observability] enabled = false`，避免在免费环境下产生不必要的观测/上报配置。
   - 开发/排查建议使用 `wrangler tail` 或 Dashboard 的实时日志查看。
+  - 若你看到 CI 中 Wrangler 调用 `/script-settings` 并报 Logpush 权限错误，请确认已使用本仓库提供的“API 上传”方式部署（而非直接 `wrangler deploy`）。
   - 使用 GitHub Actions 部署时，工作流会通过 API 设置 cron 计划（`0 0 * * *`）。若你手动部署（`wrangler deploy`），也会根据 `wrangler.toml` 自动配置。
 
 - 安全与防护（免费可用）

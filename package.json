@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "start": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "deploy:prod": "wrangler deploy --env production"
+    "deploy": "bash scripts/deploy_via_api.sh",
+    "deploy:prod": "bash scripts/deploy_via_api.sh"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250917.0",
