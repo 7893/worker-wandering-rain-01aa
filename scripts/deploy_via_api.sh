@@ -63,18 +63,4 @@ if (( http_code < 200 || http_code >= 300 )); then
   exit 1
 fi
 
-# The cron schedule is now read from wrangler.toml, but let's ensure it's applied.
-CRON_SCHEDULE=$(grep 'crons' ../wrangler.toml | sed -n 's/.*crons = \["\([^"]*\)"\].*/\1/p')
-
-if [[ -n "${CRON_SCHEDULE}" ]]; then
-    echo "Configuring cron schedule ('${CRON_SCHEDULE}')..."
-    curl -fLsS -X PUT \
-      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-      -H "Content-Type: application/json" \
-      --data "{\"schedules\":[{\"cron\":\"${CRON_SCHEDULE}\"}]}" \
-      "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${NAME}/schedules"
-else
-    echo "No cron schedule found in wrangler.toml, skipping schedule update."
-fi
-
 echo "Done."
