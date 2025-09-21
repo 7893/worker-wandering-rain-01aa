@@ -12,30 +12,44 @@ fi
 NAME="worker-wandering-rain-01aa"
 
 # The --name flag ensures the output bundle is configured for the correct worker name.
+# This command bundles all [vars] from wrangler.toml into the output file.
 echo "Building bundle (dry-run)..."
 npx wrangler deploy --dry-run --outdir .cfbundle --minify --name "${NAME}"
 
 cd .cfbundle
 
-# The wrangler --dry-run command generates a _metadata.json.
-# We use this file as the single source of truth for deployment metadata.
-if [[ ! -f "_metadata.json" ]]; then
-    echo "Error: _metadata.json not found after wrangler dry-run." >&2
+# --- Dynamically create metadata.json --- #
+# Wrangler v4's `deploy --dry-run` no longer reliably creates _metadata.json.
+# We will construct it manually, but pull the compatibility_date from wrangler.toml
+# to keep it as the single source of truth.
+
+COMPAT_DATE=$(grep 'compatibility_date' ../wrangler.toml | cut -d '=' -f 2 | tr -d '"[:space:]')
+MAIN_MODULE="index.js" # This is the default output name from wrangler build
+
+if [[ -z "${COMPAT_DATE}" ]]; then
+    echo "Could not read compatibility_date from wrangler.toml" >&2
     exit 1
 fi
 
-# The main module name might vary, find it from the metadata
-MAIN_MODULE=$(grep -o '"main_module": "[^"]*"' _metadata.json | cut -d '"' -f 4)
+# Note: The bindings for [vars] are bundled directly into the script by wrangler.
+# The bindings for secrets need to be set via the dashboard or `wrangler secret put`.
+# Therefore, we only need to specify the main module and compatibility info here.
+cat > metadata.json << JSON
+{
+  "main_module": "${MAIN_MODULE}",
+  "compatibility_date": "${COMPAT_DATE}"
+}
+JSON
 
-if [[ -z "$MAIN_MODULE" ]]; then
-  echo "Could not determine main module from _metadata.json" >&2
-  exit 1
-fi
+echo "--- Generated metadata.json ---"
+cat metadata.json
+echo "-----------------------------"
+
 
 echo "Uploading script via API using main module '${MAIN_MODULE}'..."
 http_code=$(curl -sS -X PUT \
   -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-  -F "metadata=@_metadata.json;type=application/json" \
+  -F "metadata=@metadata.json;type=application/json" \
   -F "${MAIN_MODULE}=@${MAIN_MODULE};type=application/javascript+module" \
   -o /tmp/cf_upload_body.json -w '%{http_code}' \
   "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${NAME}")
@@ -50,12 +64,17 @@ if (( http_code < 200 || http_code >= 300 )); then
 fi
 
 # The cron schedule is now read from wrangler.toml, but let's ensure it's applied.
-# Note: wrangler deploy should handle this, but API call is explicit.
-CRON_SCHEDULE=$(grep -o 'crons = \["[^"]*\]' ../wrangler.toml | cut -d '"' -f 2)
+CRON_SCHEDULE=$(grep 'crons =' ../wrangler.toml | cut -d '=' -f 2 | tr -d '"[][:space:]')
 
 if [[ -n "${CRON_SCHEDULE}" ]]; then
     echo "Configuring cron schedule ('${CRON_SCHEDULE}')..."
     curl -fLsS -X PUT \
       -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
       -H "Content-Type: application/json" \
-      --data "{\"schedules\":[{\"cron\":\"${CRON_SCHEDULE}\
+      --data "{\"schedules\":[{\"cron\":\"${CRON_SCHEDULE}\"}]}" \
+      "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${NAME}/schedules"
+else
+    echo "No cron schedule found in wrangler.toml, skipping schedule update."
+fi
+
+echo "Done."
