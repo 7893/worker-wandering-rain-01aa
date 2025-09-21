@@ -15,7 +15,18 @@ echo "Building bundle (dry-run)..."
 npx wrangler deploy --dry-run --outdir .cfbundle --minify
 
 cd .cfbundle
-echo '{"main_module":"index.js"}' > metadata.json
+cat > metadata.json << 'JSON'
+{
+  "main_module": "index.js",
+  "compatibility_date": "2025-09-20",
+  "bindings": [
+    { "name": "ORDS_BASE_URL",   "type": "plain_text", "text": "https://w9cigs8ax3ponzm-ioftnbqu5k6zb6ea.adb.ap-tokyo-1.oraclecloudapps.com/ords" },
+    { "name": "ORDS_SCHEMA_PATH", "type": "plain_text", "text": "admin" },
+    { "name": "ORDS_API_PATH",    "type": "plain_text", "text": "colorevents" },
+    { "name": "DB_USER",          "type": "plain_text", "text": "ADMIN" }
+  ]
+}
+JSON
 
 echo "Uploading script via API..."
 curl -fLsS -X PUT \
@@ -32,4 +43,3 @@ curl -fLsS -X PUT \
   "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/${NAME}/schedules"
 
 echo "Done."
-
