@@ -52,3 +52,12 @@ curl -fLsS -X PUT \
   "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/${NAME}/schedules"
 
 echo "Done."
+
+# Verify script exists (best-effort)
+echo "Verifying script exists..."
+curl -sS -H "Authorization: Bearer ${CF_API_TOKEN}" \
+  "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/${NAME}" \
+  -o /tmp/cf_get_script.json -w "HTTP %{http_code}\n"
+echo "--- GET script response ---"
+cat /tmp/cf_get_script.json || true
+echo "---------------------------"

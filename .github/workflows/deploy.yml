@@ -76,6 +76,20 @@ JSON
             exit 1
           fi
 
+      # --- Verify uploaded Worker exists and print basic info ---
+      - name: Verify Worker exists
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -sS -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/worker-wandering-rain-01aa" \
+            -o /tmp/cf_get_script.json -w "HTTP %{http_code}\n"
+          echo "--- GET script response ---"
+          cat /tmp/cf_get_script.json || true
+          echo "---------------------------"
+
       # --- Explicitly disable Observability/Logpush via script-settings if present (best-effort) ---
       - name: Ensure Observability disabled (best-effort)
         if: always()
