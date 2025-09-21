@@ -29,11 +29,19 @@ cat > metadata.json << 'JSON'
 JSON
 
 echo "Uploading script via API..."
-curl -fLsS -X PUT \
+http_code=$(curl -sS -X PUT \
   -H "Authorization: Bearer ${CF_API_TOKEN}" \
+  -H "X-Workers-Module: true" \
   -F "metadata=@metadata.json;type=application/json" \
-  -F "index.js=@index.js;type=application/javascript" \
-  "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/${NAME}"
+  -F "index.js=@index.js;type=application/javascript+module" \
+  -o /tmp/cf_upload_body.json -w "%{http_code}" \
+  "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/${NAME}")
+echo "HTTP ${http_code}"
+cat /tmp/cf_upload_body.json || true
+if [[ ! ${http_code} =~ ^2|^3 ]]; then
+  echo "Upload failed" >&2
+  exit 1
+fi
 
 echo "Configuring cron schedule (00:00 UTC daily)..."
 curl -fLsS -X PUT \
