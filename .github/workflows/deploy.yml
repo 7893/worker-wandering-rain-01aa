@@ -28,7 +28,7 @@ jobs:
 
       # --- 安装依赖 ---
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       # --- 部署 ---
       - name: Deploy to Cloudflare Workers
