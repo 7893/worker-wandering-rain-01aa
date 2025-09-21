@@ -54,18 +54,27 @@ export async function insertColorRecord(colorData: Partial<ColorRecordForAutoRes
     let attempt = 0;
     let response: Response | null = null;
     let lastError: any = null;
+    const baseTimeoutMs = 8000; // per-attempt network timeout
 
     while (attempt < maxAttempts) {
         attempt++;
         try {
+            // Per-attempt timeout controller (fallback if AbortSignal.timeout is not available)
+            const controller = new AbortController();
+            const timeout = setTimeout(() => {
+                try { controller.abort(); } catch {}
+            }, Math.min(baseTimeoutMs * attempt, 20000));
+
             response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': basicAuthHeader
                 },
-                body: requestBody
+                body: requestBody,
+                signal: controller.signal as any
             });
+            clearTimeout(timeout);
 
             // Retry on 5xx; break on success or 4xx
             if (response.ok || (response.status >= 400 && response.status < 500)) {
@@ -83,8 +92,8 @@ export async function insertColorRecord(colorData: Partial<ColorRecordForAutoRes
     }
 
     if (!response || !response.ok) {
-        const status = response.status;
-        const statusText = response.statusText;
+        const status = response ? response.status : 0;
+        const statusText = response ? response.statusText : 'no response';
         let errorBodyText = '[Could not retrieve error body text]';
         try {
             errorBodyText = response ? await response.text() : String(lastError || 'no response');

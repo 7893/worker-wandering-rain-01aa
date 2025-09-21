@@ -30,10 +30,38 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      # --- 部署 ---
-      - name: Deploy to Cloudflare Workers
-        run: npx wrangler deploy
+      # --- 使用 wrangler 仅构建，不部署（避免 script-settings 调用） ---
+      - name: Build worker bundle (no deploy)
+        run: npx wrangler deploy --dry-run --outdir .cfbundle --minify
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          # 可能需要的其他环境变量...
+
+      # --- 组装 metadata 并通过 API 直接上传脚本，绕开 script-settings ---
+      - name: Upload bundle via Cloudflare API (modules)
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd .cfbundle
+          # metadata 至少需要 main_module 字段；名称与 --outdir 产物一致
+          echo '{"main_module":"index.js"}' > metadata.json
+          curl -fLsS -X PUT \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            -F "metadata=@metadata.json;type=application/json" \
+            -F "index.js=@index.js;type=application/javascript" \
+            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/worker-wandering-rain-01aa"
+
+      # --- Ensure cron schedules are configured (Free plan supports up to 5) ---
+      - name: Ensure Worker cron schedule
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fLsS -X PUT \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"schedules":[{"cron":"0 0 * * *"}]}' \
+            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/worker-wandering-rain-01aa/schedules"

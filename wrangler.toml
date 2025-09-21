@@ -2,7 +2,18 @@
 
 name = "worker-wandering-rain-01aa"
 main = "src/index.ts"
-compatibility_date = "2023-10-30" # 您可以根据 Cloudflare 文档更新到更近的日期
+compatibility_date = "2025-09-20" # 已核对文档，更新到当前日期；如遇不兼容可回滚
+
+# 使用免费套餐并通过 workers.dev 访问时可保持默认（workers_dev=true）。
+# 如需绑定自定义域名，请在 Cloudflare 面板添加 Route，或在此处配置 route/routes（示例见下方注释）。
+# 参考：https://developers.cloudflare.com/workers/wrangler/configuration/
+
+# workers_dev = true
+# route = { pattern = "example.com/*", zone_name = "example.com" }
+# routes = [
+#   { pattern = "www.example.com/*", zone_name = "example.com" },
+#   { pattern = "api.example.com/*",  zone_name = "example.com" }
+# ]
 
 [observability]
 # Explicitly disable Observability to avoid Logpush/script-settings calls on free plans
