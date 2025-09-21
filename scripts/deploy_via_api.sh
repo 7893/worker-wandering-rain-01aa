@@ -64,7 +64,7 @@ if (( http_code < 200 || http_code >= 300 )); then
 fi
 
 # The cron schedule is now read from wrangler.toml, but let's ensure it's applied.
-CRON_SCHEDULE=$(grep 'crons =' ../wrangler.toml | cut -d '=' -f 2 | cut -d '#' -f 1 | tr -d '"[][:space:]')
+CRON_SCHEDULE=$(grep 'crons' ../wrangler.toml | sed -n 's/.*crons = \["\([^"]*\)"\].*/\1/p')
 
 if [[ -n "${CRON_SCHEDULE}" ]]; then
     echo "Configuring cron schedule ('${CRON_SCHEDULE}')..."
