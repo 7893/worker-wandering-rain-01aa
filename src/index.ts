@@ -25,6 +25,20 @@ export default {
         const referer = request.headers.get('Referer') || null;
         const cf = request.cf;
 
+        // Basic health check endpoint for observability
+        if (request.method === 'GET' && url.pathname === '/health') {
+            const body = JSON.stringify({ status: 'ok', time: new Date().toISOString() });
+            return new Response(body, {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                    'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
+        }
+
         if (request.method === "POST" && url.pathname === '/') {
             const minimumTrustScore = 10;
 
@@ -33,25 +47,35 @@ export default {
                     `Blocking POST request: Low trust score (${cf.clientTrustScore}). ` +
                     `IP: ${clientIp}, Country: ${cf.country || 'N/A'}, ASN: ${cf.asn || 'N/A'}`
                 );
-                return new Response('Forbidden by trust score', { status: 403 });
+                return new Response(JSON.stringify({ error: 'forbidden', reason: 'low_trust_score' }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json; charset=UTF-8' }
+                });
             }
 
             try {
-                if (request.headers.get("Content-Type") !== "application/json") {
-                    console.warn(`Bad POST Content-Type from ${clientIp}: ${request.headers.get("Content-Type")}`);
-                    return new Response("Bad Request: Expected Content-Type application/json", { status: 400 });
+                const contentType = request.headers.get('Content-Type') || '';
+                if (!contentType.toLowerCase().startsWith('application/json')) {
+                    console.warn(`Bad POST Content-Type from ${clientIp}: ${contentType}`);
+                    return new Response(
+                        JSON.stringify({ error: 'bad_request', reason: 'expected_application_json' }),
+                        { status: 400, headers: { 'Content-Type': 'application/json; charset=UTF-8' } }
+                    );
                 }
 
                 interface IncomingCoreData { color: string; trace_id: string; source: string; }
                 const coreData: IncomingCoreData = await request.json();
 
-                if (!coreData || typeof coreData.color !== 'string' || !coreData.color.startsWith('#') ||
-                    coreData.color.length > 7 ||
-                    typeof coreData.trace_id !== 'string' || coreData.trace_id.length === 0 ||
+                const colorOk = typeof coreData?.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(coreData.color);
+                const traceOk = typeof coreData?.trace_id === 'string' && coreData.trace_id.length > 0 && coreData.trace_id.length <= 128;
+                if (!coreData || !colorOk || !traceOk ||
                     typeof coreData.source !== 'string' ||
                     !['a', 'c', 'i'].includes(coreData.source)) {
                     console.error("Received invalid core data structure, color format, or source from client:", coreData);
-                    return new Response("Bad Request: Invalid core data payload from client", { status: 400 });
+                    return new Response(
+                        JSON.stringify({ error: 'bad_request', reason: 'invalid_payload' }),
+                        { status: 400, headers: { 'Content-Type': 'application/json; charset=UTF-8' } }
+                    );
                 }
 
                 if (limiter.canProceed()) {
@@ -83,16 +107,25 @@ export default {
                             }
                         })()
                     );
-                    return new Response("OK", { status: 200 });
+                    return new Response(JSON.stringify({ status: 'ok' }), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json; charset=UTF-8' }
+                    });
 
                 } else {
                     console.log(`Rate limit exceeded for trace ${coreData.trace_id} from IP ${clientIp}`);
-                    return new Response("Too Many Requests", { status: 429 });
+                    return new Response(
+                        JSON.stringify({ error: 'too_many_requests' }),
+                        { status: 429, headers: { 'Content-Type': 'application/json; charset=UTF-8' } }
+                    );
                 }
 
             } catch (e: any) {
-                console.error("Error processing POST request in fetch handler:", e.message, e.stack, e);
-                return new Response("Bad Request or Internal Error processing POST", { status: 400 });
+                console.error("Error processing POST request in fetch handler:", e?.message, e?.stack, e);
+                return new Response(
+                    JSON.stringify({ error: 'bad_request', reason: 'invalid_json_or_internal' }),
+                    { status: 400, headers: { 'Content-Type': 'application/json; charset=UTF-8' } }
+                );
             }
         }
 
@@ -109,7 +142,10 @@ export default {
                     "Content-Type": "text/html; charset=UTF-8",
                     "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
                     "Pragma": "no-cache",
-                    "Expires": "0"
+                    "Expires": "0",
+                    // Basic security headers (kept minimal to avoid behavior change)
+                    "X-Content-Type-Options": "nosniff",
+                    "Referrer-Policy": "no-referrer"
                 }
             });
         }
