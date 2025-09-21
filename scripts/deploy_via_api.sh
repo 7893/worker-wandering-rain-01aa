@@ -38,7 +38,8 @@ http_code=$(curl -sS -X PUT \
   "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/${NAME}")
 echo "HTTP ${http_code}"
 cat /tmp/cf_upload_body.json || true
-if [[ ! ${http_code} =~ ^2|^3 ]]; then
+# Accept 2xx and 3xx; fail otherwise
+if (( http_code < 200 || http_code >= 400 )); then
   echo "Upload failed" >&2
   exit 1
 fi
