@@ -2,7 +2,7 @@
 
 name = "worker-wandering-rain-01aa"
 main = "src/index.ts"
-compatibility_date = "2024-07-25" # 已核对文档，更新到当前日期；如遇不兼容可回滚
+compatibility_date = "2024-07-25"
 
 # 使用免费套餐并通过 workers.dev 访问时可保持默认（workers_dev=true）。
 # 如需绑定自定义域名，请在 Cloudflare 面板添加 Route，或在此处配置 route/routes（示例见下方注释）。
@@ -26,6 +26,6 @@ ORDS_API_PATH = "colorevents"
 DB_USER = "ADMIN"
 
 [triggers]
-crons = ["0 0 * * *"] # 每天执行一次 (UTC 每天零点，也就是 +8 早上8点)
+crons = ["0 0 * * *"]
 
 # DB_PASSWORD 必须作为 Secret 设置，例如通过 `npx wrangler secret put DB_PASSWORD`
