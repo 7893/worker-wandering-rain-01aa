@@ -4,6 +4,7 @@ node_modules/
 # wrangler build artifacts
 .wrangler/
 dist/
+.cfbundle/
 
 # editor/OS
 .DS_Store
