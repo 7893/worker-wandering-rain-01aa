@@ -2,6 +2,8 @@
 node_modules
 .pnp*
 .npm
+.pnpm-store
+.pnpm-store/
 
 # Build output
 dist
@@ -15,6 +17,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+*.log.*
 
 # Local development variables
 # The .dev.vars file is used by `wrangler dev` to load secrets and variables.
@@ -25,6 +28,11 @@ lerna-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Local backups and merge artifacts
+*.bak
+*.orig
+.tool-versions.bak.*
 
 # IDE and editor directories
 .vscode/
@@ -50,4 +58,3 @@ Thumbs.db
 # Test reports
 coverage
 .nyc_output
-
