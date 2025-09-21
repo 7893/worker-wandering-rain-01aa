@@ -4,6 +4,10 @@ name = "worker-wandering-rain-01aa"
 main = "src/index.ts"
 compatibility_date = "2023-10-30" # 您可以根据 Cloudflare 文档更新到更近的日期
 
+[observability]
+# Explicitly disable Observability to avoid Logpush/script-settings calls on free plans
+enabled = false
+
 [vars]
 ORDS_BASE_URL = "https://w9cigs8ax3ponzm-ioftnbqu5k6zb6ea.adb.ap-tokyo-1.oraclecloudapps.com/ords"
 ORDS_SCHEMA_PATH = "admin"
