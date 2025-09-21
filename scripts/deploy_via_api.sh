@@ -23,7 +23,7 @@ cd .cfbundle
 # We will construct it manually, but pull the compatibility_date from wrangler.toml
 # to keep it as the single source of truth.
 
-COMPAT_DATE=$(grep 'compatibility_date' ../wrangler.toml | cut -d '=' -f 2 | tr -d '"[:space:]')
+COMPAT_DATE=$(grep 'compatibility_date' ../wrangler.toml | cut -d '=' -f 2 | cut -d '#' -f 1 | tr -d '"[:space:]')
 MAIN_MODULE="index.js" # This is the default output name from wrangler build
 
 if [[ -z "${COMPAT_DATE}" ]]; then
