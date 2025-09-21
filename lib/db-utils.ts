@@ -49,27 +49,45 @@ export async function insertColorRecord(colorData: Partial<ColorRecordForAutoRes
 
     console.log(`Sending POST to AutoREST: ${apiUrl} for trace_id: ${colorData.trace_id}`);
 
-    let response: Response;
-    try {
-        response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': basicAuthHeader
-            },
-            body: requestBody
-        });
-    } catch (fetchError: any) {
-        console.error(`Worker fetch to AutoREST failed. Trace: ${colorData.trace_id}, URL: ${apiUrl}, Error: ${fetchError.message}`, fetchError);
-        throw new Error(`Network error calling ORDS AutoREST: ${fetchError.message}`);
+    // Simple retry with exponential backoff for transient failures
+    const maxAttempts = 3;
+    let attempt = 0;
+    let response: Response | null = null;
+    let lastError: any = null;
+
+    while (attempt < maxAttempts) {
+        attempt++;
+        try {
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': basicAuthHeader
+                },
+                body: requestBody
+            });
+
+            // Retry on 5xx; break on success or 4xx
+            if (response.ok || (response.status >= 400 && response.status < 500)) {
+                break;
+            }
+        } catch (fetchError: any) {
+            lastError = fetchError;
+            console.error(`AutoREST network error (attempt ${attempt}/${maxAttempts}) trace=${colorData.trace_id}: ${fetchError?.message}`);
+        }
+
+        if (attempt < maxAttempts) {
+            const delayMs = Math.min(1000 * 2 ** (attempt - 1), 4000) + Math.floor(Math.random() * 200);
+            await new Promise((r) => setTimeout(r, delayMs));
+        }
     }
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         const status = response.status;
         const statusText = response.statusText;
         let errorBodyText = '[Could not retrieve error body text]';
         try {
-            errorBodyText = await response.text();
+            errorBodyText = response ? await response.text() : String(lastError || 'no response');
         } catch (e) {
             console.warn(`Could not get text from error response body for trace ${colorData.trace_id}`, e);
         }
