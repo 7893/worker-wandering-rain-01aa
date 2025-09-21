@@ -58,11 +58,22 @@ jobs:
             ]
           }
 JSON
-          curl -fLsS -X PUT \
+          echo '--- metadata.json ---'
+          cat metadata.json
+          echo '---------------------'
+          http_code=$(curl -sS -X PUT \
             -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            -H "X-Workers-Module: true" \
             -F "metadata=@metadata.json;type=application/json" \
-            -F "index.js=@index.js;type=application/javascript" \
-            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/worker-wandering-rain-01aa"
+            -F "index.js=@index.js;type=application/javascript+module" \
+            -o /tmp/cf_upload_body.json -w "%{http_code}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/workers/scripts/worker-wandering-rain-01aa")
+          echo "HTTP ${http_code}"
+          cat /tmp/cf_upload_body.json || true
+          if [[ ! ${http_code} =~ ^2|^3 ]]; then
+            echo "Upload failed" >&2
+            exit 1
+          fi
 
       # --- Explicitly disable Observability/Logpush via script-settings if present (best-effort) ---
       - name: Ensure Observability disabled (best-effort)
