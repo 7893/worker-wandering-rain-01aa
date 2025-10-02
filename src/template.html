@@ -11,38 +11,30 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      /* 主轴（垂直）居中 */
       align-items: center;
-      /* 交叉轴（水平）居中 */
       min-height: 100vh;
-      /* 确保 body 至少占满整个视口高度 */
       background-color: __COLOR_HEX__;
       transition: background-color 0.8s;
       font-family: sans-serif;
       cursor: pointer;
       text-align: center;
-      /* 让内部文本也默认居中 */
-      /* --- ADD CSS START --- */
       gap: 0.5em;
-      /* 替代 time-display 的 margin，提供间隙 */
-      /* --- ADD CSS END --- */
+      transform: translateZ(0);
+      will-change: background-color;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
     }
 
     .time-display {
       font-size: clamp(1.5rem, 4vw, 2rem);
-      /* 响应式字体大小 */
       color: white;
       text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-      /* --- MODIFY CSS START --- */
       margin: 0;
-      /* 移除上下 margin */
       padding: 0.1em 0;
-      /* 可以加一点微小的上下 padding 改善观感 */
-      /* width: auto; */
-      /* 宽度自动，由 flex 容器处理居中 */
       line-height: 1.2;
-      /* 可以微调行高 */
-      /* --- MODIFY CSS END --- */
+      transform: translateZ(0);
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
     }
 
     /* Favicon link stays the same (square) */

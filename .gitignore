@@ -5,8 +5,30 @@ node_modules/
 .wrangler/
 dist/
 .cfbundle/
+worker/
 
 # editor/OS
 .DS_Store
 *.log
 coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# env files
+.env
+.env.local
+.env.*.local
+
+# cache
+.cache/
+*.cache
+
+# temp files
+tmp/
+temp/
+*.tmp
