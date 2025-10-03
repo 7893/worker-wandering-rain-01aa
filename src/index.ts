@@ -19,6 +19,10 @@ function securityHeaders(extra?: Record<string, string>): HeadersInit {
     return { ...(base as any), ...(extra || {}) };
 }
 
+function getHongKongTime(): string {
+    return new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Hong_Kong' }).replace(' ', 'T') + '.000Z';
+}
+
 export interface Env extends DbEnv {
     // MY_KV_NAMESPACE: KVNamespace;
 }
@@ -59,7 +63,7 @@ export default {
 
         // Basic health check endpoint for observability
         if (request.method === 'GET' && url.pathname === '/health') {
-            const body = JSON.stringify({ status: 'ok', time: new Date().toISOString() });
+            const body = JSON.stringify({ status: 'ok', time: getHongKongTime() });
             return new Response(body, {
                 status: 200,
                 headers: sh({
@@ -155,7 +159,7 @@ export default {
                         color: coreData.color,
                         trace_id: coreData.trace_id,
                         source: coreData.source,
-                        event_at: new Date().toISOString(), // 显式发送 event_at
+                        event_at: getHongKongTime(), // 使用香港时区
                         client_ip: clientIp,
                         user_agent: userAgentSafe,
                         referer: refererSafe,
@@ -254,7 +258,7 @@ export default {
         env: Env,
         ctx: ExecutionContext
     ): Promise<void> {
-        console.log(`[${new Date().toISOString()}] Cron Trigger (Simulated User Visit) Fired: ${event.cron}`);
+        console.log(`[${getHongKongTime()}] Cron Trigger (Simulated User Visit) Fired: ${event.cron}`);
 
         const simulatedColor = generateRandomColorHex();
         const simulatedTraceId = `cron-sim-${Date.now()}-${crypto.randomUUID().substring(0, 8)}`;
@@ -263,7 +267,7 @@ export default {
             color: simulatedColor, // 使用随机生成的颜色
             trace_id: simulatedTraceId,
             source: 's', // 修改为 's' 以符合数据库 CHECK_COLOR_EVENTS_SRC 约束
-            event_at: new Date().toISOString(), // 显式发送事件时间
+            event_at: getHongKongTime(), // 使用香港时区
             client_ip: "CRON_SIMULATED_IP",
             user_agent: "WanderingRain-Cron-Simulator/1.0 (Scheduled Task)",
             referer: "urn:cloudflare:worker:scheduled",
