@@ -6,9 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "start": "wrangler dev",
-    "deploy": "bash scripts/deploy_via_api.sh",
-    "deploy:prod": "bash scripts/deploy_via_api.sh",
+    "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
