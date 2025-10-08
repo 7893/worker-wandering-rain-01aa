@@ -1,7 +1,6 @@
 // src/index.ts (AutoREST 适配版，scheduled 函数模拟用户访问，修正 source 和 event_at)
 
 import { generateRandomColorHex } from '../lib/color-utils';
-import { generateTraceId } from '../lib/trace-utils';
 import { RateLimiter } from '../lib/rate-limit';
 import { insertColorRecord, Env as DbEnv, ColorRecordForAutoRest } from '../lib/db-utils';
 import pageTemplate from './template';
@@ -23,19 +22,6 @@ function getHongKongTimeAsUTC(): string {
     // 注意：这个函数返回香港时间但标记为 UTC（与历史数据保持一致）
     // 实际存储的是 UTC+8 时间，但带 Z 后缀
     return new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Hong_Kong' }).replace(' ', 'T') + '.000Z';
-}
-
-function escapeHtml(str: string): string {
-    return str.replace(/[&<>"']/g, (char) => {
-        const map: Record<string, string> = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        };
-        return map[char] || char;
-    });
 }
 
 export interface Env extends DbEnv {
@@ -255,13 +241,11 @@ export default {
         }
 
         if (request.method === "GET" && url.pathname === '/') {
-            const traceId = generateTraceId();
             const colorHex = generateRandomColorHex();
 
             const htmlContent = pageTemplate
                 .replaceAll('__COLOR_HEX__', colorHex)
                 .replaceAll('__COLOR_HEX_URL_ENCODED__', colorHex.replace('#', '%23'))
-                .replaceAll('__TRACE_ID__', traceId)
                 .replaceAll('__INITIAL_COLOR_HEX__', colorHex);
 
             return new Response(htmlContent, {
