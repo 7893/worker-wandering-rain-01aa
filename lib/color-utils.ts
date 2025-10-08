@@ -22,8 +22,8 @@ export function generateRandomColorHex(): string {
         b = hue2rgb(p, q, h1 - 1 / 3);
     }
     const toHex = (x: number) => {
-        const h = Math.round(x * 255).toString(16);
-        return h.length === 1 ? "0" + h : h;
+        const clamped = Math.max(0, Math.min(255, Math.round(x * 255)));
+        return clamped.toString(16).padStart(2, '0');
     };
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }

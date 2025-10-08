@@ -4,7 +4,10 @@ export class RateLimiter {
     private lastTimestamp: number;
 
     constructor(limit: number) {
-        this.limit = limit;
+        if (limit <= 0 || !Number.isFinite(limit)) {
+            throw new Error("Rate limit must be a positive finite number");
+        }
+        this.limit = Math.floor(limit);
         this.counter = 0;
         this.lastTimestamp = Date.now();
     }

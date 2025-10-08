@@ -28,18 +28,24 @@ export interface ColorRecordForAutoRest {
 }
 
 export async function insertColorRecord(colorData: Partial<ColorRecordForAutoRest>, env: Env): Promise<void> {
-    const baseUrl = env.ORDS_BASE_URL ? env.ORDS_BASE_URL.replace(/\/$/, '') : '';
-    const schemaPath = env.ORDS_SCHEMA_PATH ? env.ORDS_SCHEMA_PATH.replace(/^\/|\/$/g, '') : '';
-    const tableAliasPath = env.ORDS_API_PATH ? env.ORDS_API_PATH.replace(/^\/|\/$/g, '') : '';
+    if (!colorData || !colorData.color || !colorData.trace_id) {
+        throw new Error("Invalid color data: missing required fields");
+    }
+
+    const baseUrl = env.ORDS_BASE_URL?.trim().replace(/\/$/, '') || '';
+    const schemaPath = env.ORDS_SCHEMA_PATH?.trim().replace(/^\/|\/$/g, '') || '';
+    const tableAliasPath = env.ORDS_API_PATH?.trim().replace(/^\/|\/$/g, '') || '';
+
+    if (!baseUrl || !schemaPath || !tableAliasPath) {
+        console.error("Missing ORDS configuration", { baseUrl: !!baseUrl, schemaPath: !!schemaPath, tableAliasPath: !!tableAliasPath });
+        throw new Error("Invalid ORDS configuration");
+    }
 
     const apiUrl = `${baseUrl}/${schemaPath}/${tableAliasPath}/`;
 
-    if (!baseUrl || !schemaPath || !tableAliasPath || !apiUrl.startsWith("https://")) {
-        console.error(
-            "Failed to construct a valid ORDS AutoREST API URL from environment variables.",
-            { baseUrl, schemaPath, tableAliasPath, constructedUrl: apiUrl }
-        );
-        throw new Error("Invalid ORDS AutoREST API URL configuration.");
+    if (!apiUrl.startsWith("https://")) {
+        console.error("ORDS URL must use HTTPS", { apiUrl });
+        throw new Error("Invalid ORDS URL: must use HTTPS");
     }
 
     const requestBody = JSON.stringify(colorData);
