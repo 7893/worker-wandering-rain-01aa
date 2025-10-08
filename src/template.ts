@@ -20,10 +20,20 @@ const pageTemplate = `<!DOCTYPE html>
       cursor: pointer;
       text-align: center;
       gap: 0.5em;
-      transform: translateZ(0);
-      will-change: background-color;
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden;
+      overflow: hidden;
+    }
+
+    canvas#gl-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+    }
+
+    .overlay {
+      position: relative;
+      z-index: 1;
     }
 
     .time-display {
@@ -33,45 +43,191 @@ const pageTemplate = `<!DOCTYPE html>
       margin: 0;
       padding: 0.1em 0;
       line-height: 1.2;
-      transform: translateZ(0);
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden;
     }
-
-    /* Favicon link stays the same (square) */
   </style>
   <link id="favicon" rel="icon"
     href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22__COLOR_HEX_URL_ENCODED__%22/></svg>">
 </head>
 
 <body>
-  <div id="time-utc" class="time-display">Loading UTC+0…</div>
-  <div id="time-utc8" class="time-display">Loading UTC+8…</div>
+  <canvas id="gl-canvas"></canvas>
+  <div class="overlay">
+    <div id="time-utc" class="time-display">Loading UTC+0…</div>
+    <div id="time-utc8" class="time-display">Loading UTC+8…</div>
+  </div>
 
   <script>
-    // JavaScript 部分保持不变...
-    // const initialTraceId = "__TRACE_ID__"; // Currently unused on client side
-    const initialServerColor = "__INITIAL_COLOR_HEX__";
+    (function () {
+      const initialServerColor = "__INITIAL_COLOR_HEX__";
+      const canvas = document.getElementById('gl-canvas');
+      const gl = canvas.getContext('webgl2', {
+        alpha: false,
+        antialias: false,
+        powerPreference: 'high-performance'
+      }) || canvas.getContext('webgl', {
+        alpha: false,
+        antialias: false,
+        powerPreference: 'high-performance'
+      });
 
-    function hslToHex(h, s, l) { /* ... */ l /= 100; const a = s * Math.min(l, 1 - l) / 100; const f = n => { const k = (n + h / 30) % 12; const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1); return Math.round(255 * color).toString(16).padStart(2, '0'); }; return `#${f(0)}${f(8)}${f(4)}`; }
+      let program = null;
+      let uColor = null;
+      const currentColor = [0, 0, 0];
+      const targetColor = [0, 0, 0];
+      let animFrame = 0;
 
-    async function sendColorChange(hexColor, sourceType) { const eventTraceId = crypto.randomUUID(); try { const response = await fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color: hexColor, trace_id: eventTraceId, source: sourceType }) }); if (!response.ok) { console.error('Failed to send color change:', response.status, await response.text()); } } catch (e) { console.error('Error sending color change:', e); } }
+      function hex2rgb(hex) {
+        const h = hex.replace('#', '');
+        return [
+          parseInt(h.substr(0, 2), 16) / 255,
+          parseInt(h.substr(2, 2), 16) / 255,
+          parseInt(h.substr(4, 2), 16) / 255
+        ];
+      }
 
-    function updateTimeDisplays() { const now = new Date(); const utcTimeStr = now.toISOString().substring(0, 19).replace('T', ' '); const utc8Time = new Date(now.getTime() + 8 * 60 * 60 * 1000); const utc8TimeStr = utc8Time.toISOString().substring(0, 19).replace('T', ' '); document.getElementById('time-utc').textContent = utcTimeStr + ' UTC+0'; document.getElementById('time-utc8').textContent = utc8TimeStr + ' UTC+8'; }
+      function initGL() {
+        if (!gl) return false;
+        const vs = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vs, 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}');
+        gl.compileShader(vs);
+        
+        const fs = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fs, 'precision mediump float;uniform vec3 c;void main(){gl_FragColor=vec4(c,1.);}');
+        gl.compileShader(fs);
+        
+        program = gl.createProgram();
+        gl.attachShader(program, vs);
+        gl.attachShader(program, fs);
+        gl.linkProgram(program);
+        
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          console.error('GL link failed');
+          return false;
+        }
+        
+        gl.useProgram(program);
+        
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
+        
+        const pos = gl.getAttribLocation(program, 'p');
+        gl.enableVertexAttribArray(pos);
+        gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+        
+        uColor = gl.getUniformLocation(program, 'c');
+        return true;
+      }
 
-    function generateRandomHslComponents() { const h = Math.floor(Math.random() * 360); const s = Math.floor(Math.random() * 20 + 70); const l = Math.floor(Math.random() * 20 + 40); return { h, s, l }; }
+      function resize() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
+      }
 
-    function applyColor(hexColor) { document.body.style.backgroundColor = hexColor; const svgFavicon = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22${hexColor.replace('#', '%23')}%22/></svg>`; document.getElementById('favicon').setAttribute('href', svgFavicon); }
+      function setColor(hex, immediate) {
+        const rgb = hex2rgb(hex);
+        targetColor[0] = rgb[0];
+        targetColor[1] = rgb[1];
+        targetColor[2] = rgb[2];
+        if (immediate) {
+          currentColor[0] = rgb[0];
+          currentColor[1] = rgb[1];
+          currentColor[2] = rgb[2];
+        }
+        document.body.style.backgroundColor = hex;
+        document.title = hex;
+        const svg = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="' + hex.replace('#', '%23') + '"/></svg>';
+        document.getElementById('favicon').setAttribute('href', svg);
+      }
 
-    updateTimeDisplays(); setInterval(updateTimeDisplays, 1000);
+      function render() {
+        if (!gl || !program) return;
+        
+        const speed = 0.1;
+        currentColor[0] += (targetColor[0] - currentColor[0]) * speed;
+        currentColor[1] += (targetColor[1] - currentColor[1]) * speed;
+        currentColor[2] += (targetColor[2] - currentColor[2]) * speed;
+        
+        gl.clearColor(currentColor[0], currentColor[1], currentColor[2], 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.uniform3fv(uColor, currentColor);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        
+        animFrame = requestAnimationFrame(render);
+      }
 
-    function changeColor(sourceType) { const { h, s, l } = generateRandomHslComponents(); const newHexColor = hslToHex(h, s, l); applyColor(newHexColor); sendColorChange(newHexColor, sourceType); }
+      function hslToHex(h, s, l) {
+        l /= 100;
+        const a = s * Math.min(l, 1 - l) / 100;
+        const f = n => {
+          const k = (n + h / 30) % 12;
+          const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+          return Math.round(255 * color).toString(16).padStart(2, '0');
+        };
+        return '#' + f(0) + f(8) + f(4);
+      }
 
-    setInterval(() => { if (new Date().getSeconds() % 5 === 0) { changeColor('a'); } }, 1000);
+      function randomHSL() {
+        return {
+          h: Math.floor(Math.random() * 360),
+          s: Math.floor(Math.random() * 20 + 70),
+          l: Math.floor(Math.random() * 20 + 40)
+        };
+      }
 
-    document.body.addEventListener('click', () => { changeColor('c'); });
+      async function sendColor(hex, src) {
+        try {
+          await fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ color: hex, trace_id: crypto.randomUUID(), source: src })
+          });
+        } catch (e) {
+          console.error('Send failed:', e);
+        }
+      }
 
-    setTimeout(() => { sendColorChange(initialServerColor, 'i'); document.title = initialServerColor; }, 100);
+      function updateTime() {
+        const now = new Date();
+        const utc = now.toISOString().substring(0, 19).replace('T', ' ');
+        const utc8 = new Date(now.getTime() + 8 * 3600000).toISOString().substring(0, 19).replace('T', ' ');
+        document.getElementById('time-utc').textContent = utc + ' UTC+0';
+        document.getElementById('time-utc8').textContent = utc8 + ' UTC+8';
+      }
+
+      function changeColor(src) {
+        const { h, s, l } = randomHSL();
+        const hex = hslToHex(h, s, l);
+        setColor(hex, false);
+        sendColor(hex, src);
+      }
+
+      // Init
+      setColor(initialServerColor, true);
+      
+      if (initGL()) {
+        resize();
+        window.addEventListener('resize', resize);
+        render();
+      } else {
+        canvas.style.display = 'none';
+      }
+
+      updateTime();
+      setInterval(updateTime, 1000);
+
+      setInterval(() => {
+        if (new Date().getSeconds() % 5 === 0) {
+          changeColor('a');
+        }
+      }, 1000);
+
+      document.body.addEventListener('click', () => changeColor('c'));
+
+      setTimeout(() => sendColor(initialServerColor, 'i'), 100);
+    })();
   </script>
 </body>
 
