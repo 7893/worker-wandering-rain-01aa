@@ -265,16 +265,17 @@ const pageTemplate = `<!DOCTYPE html>
         sendColorChange(newHexColor, sourceType);
       }
 
+      window.addEventListener('resize', resizeCanvas);
+      applyColor(initialServerColor, true);
+      
       const glInitialised = initGl();
       if (glInitialised) {
+        applyColor(initialServerColor, true);
         requestAnimationFrame((now) => {
           lastFrame = now;
           renderFrame(now);
         });
       }
-
-      window.addEventListener('resize', resizeCanvas);
-      applyColor(initialServerColor, true);
       updateTimeDisplays();
       setInterval(updateTimeDisplays, 1000);
 
