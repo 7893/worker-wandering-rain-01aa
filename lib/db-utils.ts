@@ -53,7 +53,7 @@ export async function insertColorRecord(colorData: Partial<ColorRecordForAutoRes
     const credentials = `${env.DB_USER}:${env.DB_PASSWORD}`;
     const basicAuthHeader = `Basic ${btoa(credentials)}`;
 
-    console.log(`Sending POST to AutoREST: ${apiUrl} for trace_id: ${colorData.trace_id}`);
+    console.log(`Inserting color record for trace_id: ${colorData.trace_id}`);
 
     // Simple retry with exponential backoff for transient failures
     const maxAttempts = 3;

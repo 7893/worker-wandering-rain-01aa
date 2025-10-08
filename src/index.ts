@@ -25,6 +25,19 @@ function getHongKongTimeAsUTC(): string {
     return new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Hong_Kong' }).replace(' ', 'T') + '.000Z';
 }
 
+function escapeHtml(str: string): string {
+    return str.replace(/[&<>"']/g, (char) => {
+        const map: Record<string, string> = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        };
+        return map[char] || char;
+    });
+}
+
 export interface Env extends DbEnv {
     // MY_KV_NAMESPACE: KVNamespace;
 }
@@ -58,10 +71,27 @@ export default {
 
         const sh = (extras?: Record<string, string>) => securityHeaders({ ...(baseExtra as any), ...(extras || {}) });
 
-        const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const clientIp = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Real-IP') || 'unknown';
         const userAgent = request.headers.get('User-Agent') || 'unknown';
         const referer = request.headers.get('Referer') || null;
         const cf = request.cf;
+
+        // 验证是否通过 Cloudflare
+        if (!cf) {
+            console.warn(`Request not from Cloudflare: ${clientIp}`);
+        }
+
+        // 方法白名单
+        const allowedMethods = ['GET', 'POST', 'OPTIONS'];
+        if (!allowedMethods.includes(request.method)) {
+            return new Response('Method Not Allowed', { 
+                status: 405, 
+                headers: sh({ 
+                    'Content-Type': 'text/plain; charset=UTF-8',
+                    'Allow': allowedMethods.join(', ')
+                }) 
+            });
+        }
 
         // Basic health check endpoint for observability
         if (request.method === 'GET' && url.pathname === '/health') {
@@ -138,8 +168,25 @@ export default {
                     );
                 }
 
+                // 读取并验证 body 大小
+                const bodyText = await request.text();
+                if (bodyText.length > 2048) {
+                    return new Response(
+                        JSON.stringify({ error: 'payload_too_large' }),
+                        { status: 413, headers: sh({ 'Content-Type': 'application/json; charset=UTF-8' }) }
+                    );
+                }
+
                 interface IncomingCoreData { color: string; trace_id: string; source: string; }
-                const coreData: IncomingCoreData = await request.json();
+                let coreData: IncomingCoreData;
+                try {
+                    coreData = JSON.parse(bodyText);
+                } catch (parseError) {
+                    return new Response(
+                        JSON.stringify({ error: 'bad_request', reason: 'invalid_json' }),
+                        { status: 400, headers: sh({ 'Content-Type': 'application/json; charset=UTF-8' }) }
+                    );
+                }
 
                 const colorOk = typeof coreData?.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(coreData.color);
                 const traceOk = typeof coreData?.trace_id === 'string' && coreData.trace_id.length > 0 && coreData.trace_id.length <= 36; // align DB limit
