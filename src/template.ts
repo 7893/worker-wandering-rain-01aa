@@ -219,6 +219,9 @@ const pageTemplate = `<!DOCTYPE html>
       setInterval(updateTime, 1000);
 
       let lastAutoChange = 0;
+      let lastClickChange = 0;
+      const CLICK_COOLDOWN = 500; // 点击冷却时间 500ms
+
       setInterval(() => {
         const now = Date.now();
         if (new Date().getSeconds() % 5 === 0 && now - lastAutoChange > 4000) {
@@ -227,7 +230,13 @@ const pageTemplate = `<!DOCTYPE html>
         }
       }, 1000);
 
-      document.body.addEventListener('click', () => changeColor('c'));
+      document.body.addEventListener('click', () => {
+        const now = Date.now();
+        if (now - lastClickChange > CLICK_COOLDOWN) {
+          lastClickChange = now;
+          changeColor('c');
+        }
+      });
 
       setTimeout(() => sendColor(initialServerColor, 'i'), 100);
     })();

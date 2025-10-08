@@ -1,7 +1,7 @@
 // src/index.ts (AutoREST 适配版，scheduled 函数模拟用户访问，修正 source 和 event_at)
 
 import { generateRandomColorHex } from '../lib/color-utils';
-import { RateLimiter } from '../lib/rate-limit';
+import { RateLimiter, IPRateLimiter } from '../lib/rate-limit';
 import { insertColorRecord, Env as DbEnv, ColorRecordForAutoRest } from '../lib/db-utils';
 import pageTemplate from './template';
 
@@ -28,7 +28,8 @@ export interface Env extends DbEnv {
     // MY_KV_NAMESPACE: KVNamespace;
 }
 
-const limiter = new RateLimiter(30);
+const limiter = new RateLimiter(30); // 全局限流：30 req/s
+const ipLimiter = new IPRateLimiter(10); // 每个 IP：10 req/min
 
 export default {
     async fetch(
@@ -183,6 +184,26 @@ export default {
                     return new Response(
                         JSON.stringify({ error: 'bad_request', reason: 'invalid_payload' }),
                         { status: 400, headers: sh({ 'Content-Type': 'application/json; charset=UTF-8' }) }
+                    );
+                }
+
+                // IP 限流检查（每个 IP 每分钟最多 10 次请求）
+                if (!ipLimiter.canProceed(clientIp)) {
+                    const remaining = ipLimiter.getRemainingRequests(clientIp);
+                    console.warn(`IP rate limit exceeded for ${clientIp}, trace: ${coreData.trace_id}`);
+                    return new Response(
+                        JSON.stringify({ 
+                            error: 'too_many_requests', 
+                            reason: 'ip_rate_limit',
+                            retry_after: 60 
+                        }),
+                        { 
+                            status: 429, 
+                            headers: sh({ 
+                                'Content-Type': 'application/json; charset=UTF-8',
+                                'Retry-After': '60'
+                            }) 
+                        }
                     );
                 }
 
