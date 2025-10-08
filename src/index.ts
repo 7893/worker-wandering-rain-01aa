@@ -28,8 +28,8 @@ export interface Env extends DbEnv {
     // MY_KV_NAMESPACE: KVNamespace;
 }
 
-const limiter = new RateLimiter(30); // 全局限流：30 req/s
-const ipLimiter = new IPRateLimiter(10); // 每个 IP：10 req/min
+const limiter = new RateLimiter(300); // 全局限流：300 req/s (原 30)
+const ipLimiter = new IPRateLimiter(100); // 每个 IP：100 req/min (原 10)
 
 export default {
     async fetch(

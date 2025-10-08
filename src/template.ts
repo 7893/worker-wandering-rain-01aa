@@ -220,7 +220,7 @@ const pageTemplate = `<!DOCTYPE html>
 
       let lastAutoChange = 0;
       let lastClickChange = 0;
-      const CLICK_COOLDOWN = 500; // 点击冷却时间 500ms
+      const CLICK_COOLDOWN = 100; // 点击冷却时间 100ms (原 500ms)
 
       setInterval(() => {
         const now = Date.now();
