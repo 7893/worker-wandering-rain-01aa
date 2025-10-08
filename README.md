@@ -1,1 +1,0 @@
-A simple Cloudflare Worker for logging color events to an external database via AutoREST.
