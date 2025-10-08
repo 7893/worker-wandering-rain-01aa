@@ -9,82 +9,293 @@ const pageTemplate = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>__COLOR_HEX__</title>
   <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      /* 主轴（垂直）居中 */
-      align-items: center;
-      /* 交叉轴（水平）居中 */
+      font-family: sans-serif;
       min-height: 100vh;
-      /* 确保 body 至少占满整个视口高度 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: white;
+      cursor: pointer;
       background-color: __COLOR_HEX__;
       transition: background-color 0.8s;
-      font-family: sans-serif;
-      cursor: pointer;
-      text-align: center;
-      /* 让内部文本也默认居中 */
-      /* --- ADD CSS START --- */
+      overflow: hidden;
+    }
+
+    canvas#gl-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .overlay {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       gap: 0.5em;
-      /* 替代 time-display 的 margin，提供间隙 */
-      /* --- ADD CSS END --- */
+      max-width: 90vw;
     }
 
     .time-display {
+      margin: 0;
+      padding: 0.1em 0;
       font-size: clamp(1.5rem, 4vw, 2rem);
-      /* 响应式字体大小 */
       color: white;
       text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-      /* --- MODIFY CSS START --- */
-      margin: 0;
-      /* 移除上下 margin */
-      padding: 0.1em 0;
-      /* 可以加一点微小的上下 padding 改善观感 */
-      /* width: auto; */
-      /* 宽度自动，由 flex 容器处理居中 */
-      line-height: 1.2;
-      /* 可以微调行高 */
-      /* --- MODIFY CSS END --- */
     }
-
-    /* Favicon link stays the same (square) */
   </style>
   <link id="favicon" rel="icon"
     href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22__COLOR_HEX_URL_ENCODED__%22/></svg>">
 </head>
 
 <body>
-  <div id="time-utc" class="time-display">Loading UTC+0…</div>
-  <div id="time-utc8" class="time-display">Loading UTC+8…</div>
+  <canvas id="gl-canvas"></canvas>
+  <div class="overlay">
+    <div id="time-utc" class="time-display">Loading UTC+0…</div>
+    <div id="time-utc8" class="time-display">Loading UTC+8…</div>
+  </div>
 
   <script nonce="__CSP_NONCE__">
-    // JavaScript 部分保持不变...
-    // const initialTraceId = "__TRACE_ID__"; // Currently unused on client side
-    const initialServerColor = "__INITIAL_COLOR_HEX__";
+    (function () {
+      const initialServerColor = "__INITIAL_COLOR_HEX__";
+      const canvas = document.getElementById('gl-canvas');
+      const gl = canvas.getContext('webgl2', {
+        antialias: false,
+        powerPreference: 'high-performance',
+        premultipliedAlpha: false,
+        desynchronized: true
+      }) || canvas.getContext('webgl', {
+        antialias: false,
+        powerPreference: 'high-performance',
+        premultipliedAlpha: false
+      });
 
-    function hslToHex(h, s, l) { l /= 100; const a = s * Math.min(l, 1 - l) / 100; const f = n => { const k = (n + h / 30) % 12; const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1); return Math.round(255 * color).toString(16).padStart(2, '0'); }; return '#' + f(0) + f(8) + f(4); }
+      let program = null;
+      let colorUniformLocation = null;
+      const currentColor = new Float32Array([0, 0, 0]);
+      const targetColor = new Float32Array([0, 0, 0]);
+      let glReady = false;
+      let lastFrame = performance.now();
 
-    async function sendColorChange(hexColor, sourceType) { const eventTraceId = crypto.randomUUID(); try { const response = await fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color: hexColor, trace_id: eventTraceId, source: sourceType }) }); if (!response.ok) { console.error('Failed to send color change:', response.status, await response.text()); } } catch (e) { console.error('Error sending color change:', e); } }
+      function hexToRgbNormalized(hex) {
+        const value = hex.startsWith('#') ? hex.slice(1) : hex;
+        const r = parseInt(value.slice(0, 2), 16);
+        const g = parseInt(value.slice(2, 4), 16);
+        const b = parseInt(value.slice(4, 6), 16);
+        return [r / 255, g / 255, b / 255];
+      }
 
-    function updateTimeDisplays() { const now = new Date(); const utcTimeStr = now.toISOString().substring(0, 19).replace('T', ' '); const utc8Time = new Date(now.getTime() + 8 * 60 * 60 * 1000); const utc8TimeStr = utc8Time.toISOString().substring(0, 19).replace('T', ' '); document.getElementById('time-utc').textContent = utcTimeStr + ' UTC+0'; document.getElementById('time-utc8').textContent = utc8TimeStr + ' UTC+8'; }
+      function createShader(type, source) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+          gl.deleteShader(shader);
+          return null;
+        }
+        return shader;
+      }
 
-    function generateRandomHslComponents() { const h = Math.floor(Math.random() * 360); const s = Math.floor(Math.random() * 20 + 70); const l = Math.floor(Math.random() * 20 + 40); return { h, s, l }; }
+      function resizeCanvas() {
+        if (!glReady || !gl) return;
+        const dpr = window.devicePixelRatio || 1;
+        const displayWidth = Math.round(canvas.clientWidth * dpr);
+        const displayHeight = Math.round(canvas.clientHeight * dpr);
+        if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+          canvas.width = displayWidth;
+          canvas.height = displayHeight;
+          gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+      }
 
-    function applyColor(hexColor) { document.body.style.backgroundColor = hexColor; const svgFavicon = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="' + hexColor.replace('#', '%23') + '"/></svg>'; document.getElementById('favicon').setAttribute('href', svgFavicon); }
+      function initGl() {
+        if (!gl) return false;
+        try {
+          const vertexSource = 'attribute vec2 position;void main(){gl_Position=vec4(position,0.0,1.0);}';
+          const fragmentSource = 'precision mediump float;uniform vec3 uColor;void main(){gl_FragColor=vec4(uColor,1.0);}';
+          
+          const vertexShader = createShader(gl.VERTEX_SHADER, vertexSource);
+          const fragmentShader = createShader(gl.FRAGMENT_SHADER, fragmentSource);
+          if (!vertexShader || !fragmentShader) return false;
 
-    updateTimeDisplays(); setInterval(updateTimeDisplays, 1000);
+          program = gl.createProgram();
+          gl.attachShader(program, vertexShader);
+          gl.attachShader(program, fragmentShader);
+          gl.linkProgram(program);
 
-    function changeColor(sourceType) { const { h, s, l } = generateRandomHslComponents(); const newHexColor = hslToHex(h, s, l); applyColor(newHexColor); sendColorChange(newHexColor, sourceType); }
+          if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error('Program link error:', gl.getProgramInfoLog(program));
+            return false;
+          }
 
-    setInterval(() => { if (new Date().getSeconds() % 5 === 0) { changeColor('a'); } }, 1000);
+          gl.deleteShader(vertexShader);
+          gl.deleteShader(fragmentShader);
+          gl.useProgram(program);
 
-    document.body.addEventListener('click', () => { changeColor('c'); });
+          const positionLocation = gl.getAttribLocation(program, 'position');
+          const buffer = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+          gl.enableVertexAttribArray(positionLocation);
+          gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-    setTimeout(() => { sendColorChange(initialServerColor, 'i'); document.title = initialServerColor; }, 100);
+          colorUniformLocation = gl.getUniformLocation(program, 'uColor');
+          gl.disable(gl.DEPTH_TEST);
+          gl.disable(gl.BLEND);
+          glReady = true;
+          resizeCanvas();
+          return true;
+        } catch (e) {
+          console.error('WebGL init error:', e);
+          return false;
+        }
+      }
+
+      function setTargetColor(rgb, immediate) {
+        targetColor[0] = rgb[0];
+        targetColor[1] = rgb[1];
+        targetColor[2] = rgb[2];
+        if (immediate) {
+          currentColor[0] = rgb[0];
+          currentColor[1] = rgb[1];
+          currentColor[2] = rgb[2];
+        }
+      }
+
+      function renderFrame(now) {
+        if (!glReady || !gl) return;
+        resizeCanvas();
+        const delta = Math.min((now - lastFrame) / 1000, 1);
+        lastFrame = now;
+        const smoothing = 1 - Math.exp(-delta * 6);
+        for (let i = 0; i < 3; i++) {
+          const diff = targetColor[i] - currentColor[i];
+          if (Math.abs(diff) > 0.0001) {
+            currentColor[i] += diff * smoothing;
+          } else {
+            currentColor[i] = targetColor[i];
+          }
+        }
+        gl.useProgram(program);
+        gl.uniform3fv(colorUniformLocation, currentColor);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        requestAnimationFrame(renderFrame);
+      }
+
+      function updateFavicon(hexColor) {
+        const svgFavicon = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="' + hexColor.replace('#', '%23') + '"/></svg>';
+        document.getElementById('favicon').setAttribute('href', svgFavicon);
+      }
+
+      function applyColor(hexColor, immediate) {
+        const normalized = hexToRgbNormalized(hexColor);
+        document.body.style.backgroundColor = hexColor;
+        if (glReady && gl) {
+          setTargetColor(normalized, immediate);
+        }
+        updateFavicon(hexColor);
+        document.title = hexColor;
+      }
+
+      function hslToHex(h, s, l) {
+        l /= 100;
+        const a = (s * Math.min(l, 1 - l)) / 100;
+        const f = (n) => {
+          const k = (n + h / 30) % 12;
+          const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+          return Math.round(255 * color).toString(16).padStart(2, '0');
+        };
+        return '#' + f(0) + f(8) + f(4);
+      }
+
+      function generateRandomHslComponents() {
+        const h = Math.floor(Math.random() * 360);
+        const s = Math.floor(Math.random() * 20 + 70);
+        const l = Math.floor(Math.random() * 20 + 40);
+        return { h, s, l };
+      }
+
+      async function sendColorChange(hexColor, sourceType) {
+        const eventTraceId = crypto.randomUUID();
+        try {
+          const response = await fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ color: hexColor, trace_id: eventTraceId, source: sourceType })
+          });
+          if (!response.ok) {
+            console.error('Failed to send color change:', response.status, await response.text());
+          }
+        } catch (error) {
+          console.error('Error sending color change:', error);
+        }
+      }
+
+      function updateTimeDisplays() {
+        const now = new Date();
+        const utcTimeStr = now.toISOString().substring(0, 19).replace('T', ' ');
+        const utc8Time = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+        const utc8TimeStr = utc8Time.toISOString().substring(0, 19).replace('T', ' ');
+        document.getElementById('time-utc').textContent = utcTimeStr + ' UTC+0';
+        document.getElementById('time-utc8').textContent = utc8TimeStr + ' UTC+8';
+      }
+
+      function changeColor(sourceType) {
+        const { h, s, l } = generateRandomHslComponents();
+        const newHexColor = hslToHex(h, s, l);
+        applyColor(newHexColor, false);
+        sendColorChange(newHexColor, sourceType);
+      }
+
+      const glInitialised = initGl();
+      if (glInitialised) {
+        requestAnimationFrame((now) => {
+          lastFrame = now;
+          renderFrame(now);
+        });
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+      applyColor(initialServerColor, true);
+      updateTimeDisplays();
+      setInterval(updateTimeDisplays, 1000);
+
+      setInterval(() => {
+        if (new Date().getSeconds() % 5 === 0) {
+          changeColor('a');
+        }
+      }, 1000);
+
+      document.body.addEventListener('click', () => {
+        changeColor('c');
+      });
+
+      setTimeout(() => {
+        sendColorChange(initialServerColor, 'i');
+      }, 100);
+    })();
   </script>
 </body>
 
-</html>`;
+</html>
+`;
 
 export default pageTemplate;
