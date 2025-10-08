@@ -288,15 +288,15 @@ export default {
         env: Env,
         ctx: ExecutionContext
     ): Promise<void> {
-        console.log(`[${getHongKongTimeAsUTC()}] Cron Trigger (Simulated User Visit) Fired: ${event.cron}`);
-
         const simulatedColor = generateRandomColorHex();
         const simulatedTraceId = `cron-sim-${Date.now()}-${crypto.randomUUID().substring(0, 8)}`;
 
+        console.log(`[${getHongKongTimeAsUTC()}] Cron triggered: ${event.cron}, color: ${simulatedColor}, trace: ${simulatedTraceId}`);
+
         const simulatedUserData: ColorRecordForAutoRest = {
-            color: simulatedColor, // 使用随机生成的颜色
+            color: simulatedColor,
             trace_id: simulatedTraceId,
-            source: 's', // 修改为 's' 以符合数据库 CHECK_COLOR_EVENTS_SRC 约束
+            source: 's',
             event_at: getHongKongTimeAsUTC(),
             client_ip: "CRON_SIMULATED_IP",
             user_agent: "WanderingRain-Cron-Simulator/1.0 (Scheduled Task)",
@@ -312,15 +312,13 @@ export default {
             extra: null
         };
 
-        console.log(`Simulated user visit data for AutoREST (cron): ${JSON.stringify(simulatedUserData)}`);
-
         ctx.waitUntil(
             (async () => {
                 try {
                     await insertColorRecord(simulatedUserData, env);
-                    console.log(`Successfully logged simulated user visit (trace: ${simulatedTraceId}) via cron.`);
+                    console.log(`Cron task completed: ${simulatedTraceId}`);
                 } catch (dbError: any) {
-                    console.error(`[CRON_SIM_ERROR] Simulated user visit task failed for trace ${simulatedUserData.trace_id}. Error:`, dbError.message, dbError.stack);
+                    console.error(`[CRON_ERROR] Failed to insert record (trace: ${simulatedUserData.trace_id}):`, dbError.message);
                 }
             })()
         );
