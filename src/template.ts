@@ -273,6 +273,8 @@ const pageTemplate = `<!DOCTYPE html>
           lastFrame = now;
           renderFrame(now);
         });
+      } else {
+        canvas.style.display = 'none';
       }
       updateTimeDisplays();
       setInterval(updateTimeDisplays, 1000);
