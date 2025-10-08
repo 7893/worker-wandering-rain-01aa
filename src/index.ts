@@ -208,38 +208,19 @@ export default {
         if (request.method === "GET" && url.pathname === '/') {
             const traceId = generateTraceId();
             const colorHex = generateRandomColorHex();
-            // Generate a CSP nonce for inline script
-            const nonceBytes = new Uint8Array(16);
-            crypto.getRandomValues(nonceBytes);
-            const nonce = btoa(String.fromCharCode(...nonceBytes))
-                .replace(/=+/g, '')
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_');
 
             const htmlContent = pageTemplate
                 .replaceAll('__COLOR_HEX__', colorHex)
                 .replaceAll('__COLOR_HEX_URL_ENCODED__', colorHex.replace('#', '%23'))
                 .replaceAll('__TRACE_ID__', traceId)
-                .replaceAll('__INITIAL_COLOR_HEX__', colorHex)
-                .replaceAll('__CSP_NONCE__', nonce);
+                .replaceAll('__INITIAL_COLOR_HEX__', colorHex);
 
-            const cspWithNonce = [
-                "default-src 'self'",
-                "img-src 'self' data:",
-                "style-src 'self' 'unsafe-inline'",
-                `script-src 'self' 'nonce-${nonce}'`,
-                "connect-src 'self'",
-                "base-uri 'none'",
-                "form-action 'self'",
-                "frame-ancestors 'none'"
-            ].join('; ');
             return new Response(htmlContent, {
                 headers: sh({
                     "Content-Type": "text/html; charset=UTF-8",
                     "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
                     "Pragma": "no-cache",
-                    "Expires": "0",
-                    "Content-Security-Policy": cspWithNonce
+                    "Expires": "0"
                 })
             });
         }
