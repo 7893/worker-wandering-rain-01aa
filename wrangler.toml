@@ -20,6 +20,8 @@ compatibility_date = "2024-07-25"
 enabled = false
 
 [vars]
+# 数据库连接配置应该使用 Secret，但为了方便部署暂时使用 vars
+# 生产环境建议使用: wrangler secret put ORDS_BASE_URL
 ORDS_BASE_URL = "https://w9cigs8ax3ponzm-ioftnbqu5k6zb6ea.adb.ap-tokyo-1.oraclecloudapps.com/ords"
 ORDS_SCHEMA_PATH = "admin"
 ORDS_API_PATH = "colorevents"

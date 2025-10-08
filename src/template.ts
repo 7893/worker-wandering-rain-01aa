@@ -218,8 +218,11 @@ const pageTemplate = `<!DOCTYPE html>
       updateTime();
       setInterval(updateTime, 1000);
 
+      let lastAutoChange = 0;
       setInterval(() => {
-        if (new Date().getSeconds() % 5 === 0) {
+        const now = Date.now();
+        if (new Date().getSeconds() % 5 === 0 && now - lastAutoChange > 4000) {
+          lastAutoChange = now;
           changeColor('a');
         }
       }, 1000);
