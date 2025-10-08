@@ -19,8 +19,10 @@ function securityHeaders(extra?: Record<string, string>): HeadersInit {
     return { ...(base as any), ...(extra || {}) };
 }
 
-function getCurrentTimestamp(): string {
-    return new Date().toISOString();
+function getHongKongTimeAsUTC(): string {
+    // 注意：这个函数返回香港时间但标记为 UTC（与历史数据保持一致）
+    // 实际存储的是 UTC+8 时间，但带 Z 后缀
+    return new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Hong_Kong' }).replace(' ', 'T') + '.000Z';
 }
 
 export interface Env extends DbEnv {
@@ -63,7 +65,7 @@ export default {
 
         // Basic health check endpoint for observability
         if (request.method === 'GET' && url.pathname === '/health') {
-            const body = JSON.stringify({ status: 'ok', time: getCurrentTimestamp() });
+            const body = JSON.stringify({ status: 'ok', time: getHongKongTimeAsUTC() });
             return new Response(body, {
                 status: 200,
                 headers: sh({
@@ -159,7 +161,7 @@ export default {
                         color: coreData.color,
                         trace_id: coreData.trace_id,
                         source: coreData.source,
-                        event_at: getCurrentTimestamp(),
+                        event_at: getHongKongTimeAsUTC(),
                         client_ip: clientIp,
                         user_agent: userAgentSafe,
                         referer: refererSafe,
@@ -239,7 +241,7 @@ export default {
         env: Env,
         ctx: ExecutionContext
     ): Promise<void> {
-        console.log(`[${getCurrentTimestamp()}] Cron Trigger (Simulated User Visit) Fired: ${event.cron}`);
+        console.log(`[${getHongKongTimeAsUTC()}] Cron Trigger (Simulated User Visit) Fired: ${event.cron}`);
 
         const simulatedColor = generateRandomColorHex();
         const simulatedTraceId = `cron-sim-${Date.now()}-${crypto.randomUUID().substring(0, 8)}`;
@@ -248,7 +250,7 @@ export default {
             color: simulatedColor, // 使用随机生成的颜色
             trace_id: simulatedTraceId,
             source: 's', // 修改为 's' 以符合数据库 CHECK_COLOR_EVENTS_SRC 约束
-            event_at: getCurrentTimestamp(),
+            event_at: getHongKongTimeAsUTC(),
             client_ip: "CRON_SIMULATED_IP",
             user_agent: "WanderingRain-Cron-Simulator/1.0 (Scheduled Task)",
             referer: "urn:cloudflare:worker:scheduled",
