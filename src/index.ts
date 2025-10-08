@@ -20,7 +20,7 @@ function securityHeaders(extra?: Record<string, string>): HeadersInit {
 }
 
 function getHongKongTime(): string {
-    return new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Hong_Kong' }).replace(' ', 'T') + '.000Z';
+    return new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Hong_Kong' }).replace(' ', 'T');
 }
 
 export interface Env extends DbEnv {
