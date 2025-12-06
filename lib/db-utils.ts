@@ -55,7 +55,7 @@ export async function insertColorRecord(colorData: Partial<ColorRecordForAutoRes
 
     console.log(`Inserting color record for trace_id: ${colorData.trace_id}`);
 
-    // Simple retry with exponential backoff for transient failures
+    // Retry with exponential backoff and jitter
     const maxAttempts = 3;
     let attempt = 0;
     let response: Response | null = null;
@@ -65,7 +65,7 @@ export async function insertColorRecord(colorData: Partial<ColorRecordForAutoRes
     while (attempt < maxAttempts) {
         attempt++;
         try {
-            // Per-attempt timeout controller (fallback if AbortSignal.timeout is not available)
+            // Per-attempt timeout controller
             const controller = new AbortController();
             const timeout = setTimeout(() => {
                 try { controller.abort(); } catch {}
@@ -82,17 +82,34 @@ export async function insertColorRecord(colorData: Partial<ColorRecordForAutoRes
             });
             clearTimeout(timeout);
 
-            // Retry on 5xx; break on success or 4xx
-            if (response.ok || (response.status >= 400 && response.status < 500)) {
+            // Success
+            if (response.ok) {
                 break;
             }
+
+            // Client errors (4xx) usually shouldn't be retried, except for Rate Limited (429)
+            if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+                const errorText = await response.text();
+                console.error(`AutoREST client error (no retry) ${response.status} for trace=${colorData.trace_id}: ${errorText}`);
+                throw new Error(`AutoREST client error: ${response.status} ${errorText}`);
+            }
+
         } catch (fetchError: any) {
             lastError = fetchError;
+            // If it was a client error we threw intentionally, re-throw it
+            if (fetchError.message && fetchError.message.startsWith("AutoREST client error")) {
+                throw fetchError;
+            }
             console.error(`AutoREST network error (attempt ${attempt}/${maxAttempts}) trace=${colorData.trace_id}: ${fetchError?.message}`);
         }
 
         if (attempt < maxAttempts) {
-            const delayMs = Math.min(1000 * 2 ** (attempt - 1), 4000) + Math.floor(Math.random() * 200);
+            // Exponential backoff + Jitter
+            // Jitter helps prevent Thundering Herd problem
+            const backoff = Math.min(1000 * Math.pow(2, attempt - 1), 4000);
+            const jitter = Math.floor(Math.random() * 500); // 0-500ms random jitter
+            const delayMs = backoff + jitter;
+            
             await new Promise((r) => setTimeout(r, delayMs));
         }
     }
