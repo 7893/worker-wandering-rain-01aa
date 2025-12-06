@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 import { RateLimiter, IPRateLimiter } from '../lib/rate-limit';
 import { insertColorRecord, Env as DbEnv, ColorRecordForAutoRest } from '../lib/db-utils';
 import { generateRandomColorHex } from '../lib/color-utils';
