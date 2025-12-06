@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 import { handleGetIndex, handlePostColor, handleStaticAsset } from './controller';
 import { Env } from '../lib/db-utils';
 
