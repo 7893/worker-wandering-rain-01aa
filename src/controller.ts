@@ -22,8 +22,8 @@ function securityHeaders(extra?: Record<string, string>): HeadersInit {
     return { ...(base as any), ...(extra || {}) };
 }
 
-function getHongKongTimeAsUTC(): string {
-    return new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Hong_Kong' }).replace(' ', 'T') + '.000Z';
+function getCurrentUTCTime(): string {
+    return new Date().toISOString();
 }
 
 const sh = (extras?: Record<string, string>) => securityHeaders(extras);
@@ -133,7 +133,7 @@ export async function handlePostColor(request: Request, env: DbEnv, ctx: Executi
         color: coreData.color,
         trace_id: coreData.trace_id,
         source: coreData.source,
-        event_at: getHongKongTimeAsUTC(),
+        event_at: getCurrentUTCTime(),
         client_ip: clientIp,
         user_agent: userAgent.slice(0, 1000),
         referer: referer ? referer.slice(0, 2000) : null,
@@ -169,7 +169,7 @@ export async function handleScheduled(event: ScheduledEvent, env: DbEnv, ctx: Ex
         color: simulatedColor,
         trace_id: simulatedTraceId,
         source: 's',
-        event_at: getHongKongTimeAsUTC(),
+        event_at: getCurrentUTCTime(),
         client_ip: "CRON_SIMULATED_IP",
         user_agent: "WanderingRain-Cron-Simulator/1.0",
         referer: "urn:cloudflare:worker:scheduled",
