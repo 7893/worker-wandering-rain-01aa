@@ -28,6 +28,6 @@ ORDS_API_PATH = "colorevents"
 DB_USER = "ADMIN"
 
 [triggers]
-crons = ["*/2 * * * *"]  # 每 2 分钟执行一次，测试阶段
+crons = ["*/30 * * * *"]  # 每 30 分钟执行一次
 
 # DB_PASSWORD 必须作为 Secret 设置，例如通过 `npx wrangler secret put DB_PASSWORD`
