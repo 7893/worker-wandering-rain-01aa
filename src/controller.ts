@@ -160,26 +160,43 @@ export async function handlePostColor(request: Request, env: DbEnv, ctx: Executi
 
 // Cron 任务处理
 export async function handleScheduled(event: ScheduledEvent, env: DbEnv, ctx: ExecutionContext): Promise<void> {
-    const simulatedColor = generateRandomColorHex();
-    const simulatedTraceId = `cron-sim-${Date.now()}-${crypto.randomUUID().substring(0, 8)}`;
+    const HEALTHCHECK_URL = 'https://hc-ping.com/2850399e-4203-4e81-81f1-30515002282c';
     
-    console.log(`Cron triggered: ${event.cron}, trace: ${simulatedTraceId}`);
+    ctx.waitUntil(
+        (async () => {
+            // 1. 第一时间 ping Healthchecks,证明 Worker 被唤醒
+            await fetch(HEALTHCHECK_URL).catch(() => {});
+            
+            // 2. 执行业务逻辑
+            try {
+                const simulatedColor = generateRandomColorHex();
+                const simulatedTraceId = `cron-sim-${Date.now()}-${crypto.randomUUID().substring(0, 8)}`;
+                
+                console.log(`Cron triggered: ${event.cron}, trace: ${simulatedTraceId}`);
 
-    const data: ColorRecordForAutoRest = {
-        color: simulatedColor,
-        trace_id: simulatedTraceId,
-        source: 's',
-        event_at: getCurrentUTCTime(),
-        client_ip: "CRON_SIMULATED_IP",
-        user_agent: "WanderingRain-Cron-Simulator/1.0",
-        referer: "urn:cloudflare:worker:scheduled",
-        cf_country: "XX",
-        cf_colo: "SYSTEM",
-        cf_asn: 0,
-        cf_http_protocol: "SYSTEM",
-        cf_threat_score: 0,
-        cf_trust_score: 99
-    };
+                const data: ColorRecordForAutoRest = {
+                    color: simulatedColor,
+                    trace_id: simulatedTraceId,
+                    source: 's',
+                    event_at: getCurrentUTCTime(),
+                    client_ip: "CRON_SIMULATED_IP",
+                    user_agent: "WanderingRain-Cron-Simulator/1.0",
+                    referer: "urn:cloudflare:worker:scheduled",
+                    cf_country: "XX",
+                    cf_colo: "SYSTEM",
+                    cf_asn: 0,
+                    cf_http_protocol: "SYSTEM",
+                    cf_threat_score: 0,
+                    cf_trust_score: 99
+                };
 
-    ctx.waitUntil(insertColorRecord(data, env));
+                await insertColorRecord(data, env);
+                console.log(`Cron success: ${simulatedTraceId}`);
+            } catch (err) {
+                console.error('Cron execution failed:', err);
+                // 通知 Healthchecks 失败
+                await fetch(`${HEALTHCHECK_URL}/fail`).catch(() => {});
+            }
+        })()
+    );
 }
