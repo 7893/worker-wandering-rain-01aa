@@ -15,9 +15,13 @@ export const scriptJs = `
   });
 
   let program = null;
-  let uColor = null;
+  let uOldColor = null;
+  let uNewColor = null;
+  let uProgress = null;
+  let uResolution = null;
   const currentColor = [0, 0, 0];
   const targetColor = [0, 0, 0];
+  let progress = 1.0;
   let animFrame = 0;
   let isRendering = false;
 
@@ -37,7 +41,7 @@ export const scriptJs = `
     gl.compileShader(vs);
     
     const fs = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fs, 'precision mediump float;uniform vec3 c;void main(){gl_FragColor=vec4(c,1.);}');
+    gl.shaderSource(fs, 'precision mediump float;uniform vec3 uOld;uniform vec3 uNew;uniform float uProg;uniform vec2 uRes;void main(){vec2 uv=gl_FragCoord.xy/uRes;float d=(1.0-uv.x)+(1.0-uv.y);float t=uProg*2.0;float blend=smoothstep(t-0.3,t+0.3,d);vec3 c=mix(uNew,uOld,blend);gl_FragColor=vec4(c,1.);}');
     gl.compileShader(fs);
     
     program = gl.createProgram();
@@ -60,7 +64,10 @@ export const scriptJs = `
     gl.enableVertexAttribArray(pos);
     gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
     
-    uColor = gl.getUniformLocation(program, 'c');
+    uOldColor = gl.getUniformLocation(program, 'uOld');
+    uNewColor = gl.getUniformLocation(program, 'uNew');
+    uProgress = gl.getUniformLocation(program, 'uProg');
+    uResolution = gl.getUniformLocation(program, 'uRes');
     return true;
   }
 
@@ -73,13 +80,22 @@ export const scriptJs = `
 
   function setColor(hex, immediate) {
     const rgb = hex2rgb(hex);
-    targetColor[0] = rgb[0];
-    targetColor[1] = rgb[1];
-    targetColor[2] = rgb[2];
     if (immediate) {
       currentColor[0] = rgb[0];
       currentColor[1] = rgb[1];
       currentColor[2] = rgb[2];
+      targetColor[0] = rgb[0];
+      targetColor[1] = rgb[1];
+      targetColor[2] = rgb[2];
+      progress = 1.0;
+    } else {
+      currentColor[0] = targetColor[0];
+      currentColor[1] = targetColor[1];
+      currentColor[2] = targetColor[2];
+      targetColor[0] = rgb[0];
+      targetColor[1] = rgb[1];
+      targetColor[2] = rgb[2];
+      progress = 0.0;
     }
     // 更新 CSS 变量以改变背景色
     document.documentElement.style.setProperty('--bg-color', hex);
@@ -91,17 +107,16 @@ export const scriptJs = `
 
   function render() {
     if (!gl || !program) return;
-    
-    const speed = 0.1;
-    currentColor[0] += (targetColor[0] - currentColor[0]) * speed;
-    currentColor[1] += (targetColor[1] - currentColor[1]) * speed;
-    currentColor[2] += (targetColor[2] - currentColor[2]) * speed;
-    
-    gl.clearColor(currentColor[0], currentColor[1], currentColor[2], 1);
+
+    if (progress < 1.0) progress = Math.min(progress + 0.025, 1.0);
+
+    gl.uniform3fv(uOldColor, currentColor);
+    gl.uniform3fv(uNewColor, targetColor);
+    gl.uniform1f(uProgress, progress);
+    gl.uniform2f(uResolution, canvas.width, canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.uniform3fv(uColor, currentColor);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-    
+
     animFrame = requestAnimationFrame(render);
   }
 
