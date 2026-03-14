@@ -87,7 +87,10 @@ export const scriptJs = `
     const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
     const textColor = lum > 0.5 ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.85)';
     document.documentElement.style.setProperty('--text', textColor);
-    document.querySelectorAll('.time-display, .fc-label').forEach(el => el.style.color = textColor);
+    document.querySelectorAll('.time-display, .fc-label').forEach(el => {
+      el.style.transition = 'color 0.8s ease';
+      el.style.color = textColor;
+    });
     const svg = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="' + hex.replace('#','%23') + '"/></svg>';
     const favicon = document.getElementById('favicon');
     if (favicon) favicon.setAttribute('href', svg);
@@ -101,22 +104,25 @@ export const scriptJs = `
   }
 
   let lastHue = -1;
+  let hueDirection = 1; // 1=顺时针, -1=逆时针
 
   function randomHSL() {
-    // 1. 避免相邻色相太接近（强制差 60° 以上）
-    let h;
-    do {
-      // 2. 暖色系权重更高：70% 概率取暖色（0~60 或 300~360），30% 取全随机
-      if (Math.random() < 0.7) {
-        h = Math.random() < 0.5
-          ? Math.floor(Math.random() * 60)          // 0~60 红橙黄
-          : Math.floor(Math.random() * 60 + 300);   // 300~360 品红红
-      } else {
-        h = Math.floor(Math.random() * 360);
-      }
-    } while (lastHue >= 0 && Math.min(Math.abs(h - lastHue), 360 - Math.abs(h - lastHue)) < 15);
-    lastHue = h;
-    return { h, s: Math.floor(Math.random() * 20 + 70), l: Math.floor(Math.random() * 20 + 40) };
+    // 1. 有方向感的色相漂移
+    if (lastHue < 0) {
+      lastHue = Math.floor(Math.random() * 360);
+    } else {
+      if (Math.random() < 0.2) hueDirection *= -1; // 20% 概率反向
+      const step = 15 + Math.floor(Math.random() * 45); // 15~60°
+      lastHue = (lastHue + hueDirection * step + 360) % 360;
+    }
+    const h = lastHue;
+    // 2. 亮度连续波动（上次亮度基础上 ±8，限制在 38~62）
+    const lastL = randomHSL._lastL || 50;
+    const l = Math.min(62, Math.max(38, lastL + (Math.random() * 16 - 8)));
+    randomHSL._lastL = l;
+    // 饱和度随亮度联动，排除脏色
+    const s = Math.max(60, Math.floor(75 - (l - 40) * 0.5 + Math.random() * 10));
+    return { h, s, l: Math.floor(l) };
   }
 
   function hueDistance(hex1, hex2) {
@@ -220,13 +226,14 @@ export const scriptJs = `
   let lastAutoChange = 0, lastClickChange = 0;
   const CLICK_COOLDOWN = 100;
 
-  setInterval(() => {
-    const now = Date.now();
-    if (new Date().getSeconds() % 5 === 0 && now - lastAutoChange > 4000) {
-      lastAutoChange = now;
-      changeColor('a');
-    }
-  }, 1000);
+  function scheduleAutoChange() {
+    const delay = 3000 + Math.random() * 5000; // 3~8秒随机
+    setTimeout(() => {
+      if (!document.hidden) changeColor('a');
+      scheduleAutoChange();
+    }, delay);
+  }
+  scheduleAutoChange();
 
   function onTap() {
     const now = Date.now();

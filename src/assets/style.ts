@@ -34,17 +34,19 @@ canvas#gl-canvas {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.5em;
+  animation: fadein 0.6s ease forwards;
 }
 
 #time-hex {
   padding-bottom: 0.5em;
   border-bottom: 1px solid var(--text);
-  opacity: 0.3;
   width: 100%;
+  transition: border-color 0.8s ease;
 }
 
-#time-hex:not(:empty) {
-  opacity: 1;
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .time-display {
