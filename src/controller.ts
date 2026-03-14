@@ -102,7 +102,7 @@ export async function handlePostColor(request: Request, env: DbEnv, ctx: Executi
 
     const colorOk = typeof coreData?.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(coreData.color);
     const traceOk = typeof coreData?.trace_id === 'string' && coreData.trace_id.length > 0 && coreData.trace_id.length <= 36;
-    if (!coreData || !colorOk || !traceOk || !['a', 'c', 'i'].includes(coreData.source)) {
+    if (!coreData || !colorOk || !traceOk || !['a', 'c', 'i', 'k'].includes(coreData.source)) {
         return new Response(JSON.stringify({ error: 'bad_request', reason: 'invalid_payload' }), {
             status: 400, headers: sh({ 'Content-Type': 'application/json' })
         });

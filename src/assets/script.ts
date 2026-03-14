@@ -223,7 +223,7 @@ export const scriptJs = `
   updateTime();
   setInterval(updateTime, 1000);
 
-  let lastAutoChange = 0, lastClickChange = 0;
+  let lastClickChange = 0;
   const CLICK_COOLDOWN = 100;
 
   function scheduleAutoChange() {
