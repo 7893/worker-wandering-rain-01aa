@@ -1,13 +1,10 @@
 /// <reference types="@cloudflare/workers-types" />
-import { RateLimiter, IPRateLimiter } from '../lib/rate-limit';
 import { insertColorRecord, Env as DbEnv, ColorRecordForAutoRest } from '../lib/db-utils';
 import { generateRandomColorHex } from '../lib/color-utils';
 import { pageTemplate } from './template';
 import { styleCss } from './assets/style';
 import { scriptJs } from './assets/script';
 
-const limiter = new RateLimiter(300);
-const ipLimiter = new IPRateLimiter(100);
 
 function securityHeaders(extra?: Record<string, string>): HeadersInit {
     const base: Record<string, string> = {
@@ -111,21 +108,7 @@ export async function handlePostColor(request: Request, env: DbEnv, ctx: Executi
         });
     }
 
-    // 5. IP 限流
-    if (!ipLimiter.canProceed(clientIp)) {
-        return new Response(JSON.stringify({ error: 'too_many_requests', retry_after: 60 }), {
-            status: 429, headers: sh({ 'Content-Type': 'application/json', 'Retry-After': '60' })
-        });
-    }
-
-    // 6. 全局限流
-    if (!limiter.canProceed()) {
-        return new Response(JSON.stringify({ error: 'too_many_requests' }), {
-            status: 429, headers: sh({ 'Content-Type': 'application/json' })
-        });
-    }
-
-    // 7. 数据准备与异步写入
+    // 5. 数据准备与异步写入
     const userAgent = request.headers.get('User-Agent') || 'unknown';
     const referer = request.headers.get('Referer') || null;
 
