@@ -163,8 +163,8 @@ export const scriptJs = `
     const now = new Date();
     const utc = now.toISOString().substring(0, 19).replace('T', ' ');
     const utc8 = new Date(now.getTime() + 8 * 3600000).toISOString().substring(0, 19).replace('T', ' ');
-    document.getElementById('time-utc').textContent = utc + ' UTC+0';
-    document.getElementById('time-utc8').textContent = utc8 + ' UTC+8';
+    document.getElementById('time-utc').textContent = utc + ' UTC';
+    document.getElementById('time-utc8').textContent = utc8 + ' HKT';
   }
 
   function changeColor(src) {

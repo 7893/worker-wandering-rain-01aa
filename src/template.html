@@ -51,8 +51,8 @@
 <body>
   <canvas id="gl-canvas"></canvas>
   <div class="overlay">
-    <div id="time-utc" class="time-display">Loading UTC+0…</div>
-    <div id="time-utc8" class="time-display">Loading UTC+8…</div>
+    <div id="time-utc" class="time-display">Loading UTC…</div>
+    <div id="time-utc8" class="time-display">Loading HKT…</div>
   </div>
 
   <script>
@@ -192,8 +192,8 @@
         const now = new Date();
         const utc = now.toISOString().substring(0, 19).replace('T', ' ');
         const utc8 = new Date(now.getTime() + 8 * 3600000).toISOString().substring(0, 19).replace('T', ' ');
-        document.getElementById('time-utc').textContent = utc + ' UTC+0';
-        document.getElementById('time-utc8').textContent = utc8 + ' UTC+8';
+        document.getElementById('time-utc').textContent = utc + ' UTC';
+        document.getElementById('time-utc8').textContent = utc8 + ' HKT';
       }
 
       function changeColor(src) {

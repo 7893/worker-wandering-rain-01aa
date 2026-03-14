@@ -19,8 +19,8 @@ export const pageTemplate = `<!DOCTYPE html>
 <body>
   <canvas id="gl-canvas"></canvas>
   <div class="overlay">
-    <div id="time-utc" class="time-display">Loading UTC+0…</div>
-    <div id="time-utc8" class="time-display">Loading UTC+8…</div>
+    <div id="time-utc" class="time-display">Loading UTC…</div>
+    <div id="time-utc8" class="time-display">Loading HKT…</div>
   </div>
 
   <script>
