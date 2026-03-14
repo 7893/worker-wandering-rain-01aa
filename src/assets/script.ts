@@ -235,7 +235,7 @@ export const scriptJs = `
   setInterval(updateTime, 1000);
 
   let lastClickChange = 0;
-  const CLICK_COOLDOWN = 100;
+  const CLICK_COOLDOWN = 800;
 
   function scheduleAutoChange() {
     const delay = 3000 + Math.random() * 5000; // 3~8秒随机
@@ -253,7 +253,7 @@ export const scriptJs = `
 
   document.body.addEventListener('click', onTap);
   document.body.addEventListener('touchend', (e) => { e.preventDefault(); onTap(); }, { passive: false });
-  document.addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); changeColor('k'); } });
+  document.addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); onTap(); } });
 
   setTimeout(() => sendColor(initialServerColor, 'i'), 100);
 })();
