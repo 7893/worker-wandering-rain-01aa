@@ -107,34 +107,20 @@ export const scriptJs = `
   let hueDirection = 1; // 1=顺时针, -1=逆时针
 
   function randomHSL() {
-    // 1. 有方向感的色相漂移
+    let step = 0;
     if (lastHue < 0) {
       lastHue = Math.floor(Math.random() * 360);
     } else {
-      if (Math.random() < 0.2) hueDirection *= -1; // 20% 概率反向
-      const step = 15 + Math.floor(Math.random() * 45); // 15~60°
+      if (Math.random() < 0.2) hueDirection *= -1;
+      step = 15 + Math.floor(Math.random() * 45);
       lastHue = (lastHue + hueDirection * step + 360) % 360;
     }
     const h = lastHue;
-    // 2. 亮度连续波动（上次亮度基础上 ±8，限制在 38~62）
     const lastL = randomHSL._lastL || 50;
     const l = Math.min(62, Math.max(38, lastL + (Math.random() * 16 - 8)));
     randomHSL._lastL = l;
-    // 饱和度随亮度联动，排除脏色
     const s = Math.max(60, Math.floor(75 - (l - 40) * 0.5 + Math.random() * 10));
-    return { h, s, l: Math.floor(l) };
-  }
-
-  function hueDistance(hex1, hex2) {
-    function toH(hex) {
-      const r = parseInt(hex.substr(1,2),16)/255, g = parseInt(hex.substr(3,2),16)/255, b = parseInt(hex.substr(5,2),16)/255;
-      const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
-      if (d === 0) return 0;
-      let h = max === r ? (g-b)/d % 6 : max === g ? (b-r)/d+2 : (r-g)/d+4;
-      return ((h * 60) + 360) % 360;
-    }
-    const diff = Math.abs(toH(hex1) - toH(hex2));
-    return Math.min(diff, 360 - diff);
+    return { h, s, l: Math.floor(l), step };
   }
 
   async function sendColor(hex, src) {
@@ -197,11 +183,9 @@ export const scriptJs = `
   }
 
   function changeColor(src) {
-    const { h, s, l } = randomHSL();
+    const { h, s, l, step } = randomHSL();
     const hex = hslToHex(h, s, l);
-    // 3. 颜色距离大 → 过渡慢，距离小 → 过渡快
-    const dist = hueDistance(currentHex, hex);
-    transitionSpeed = dist > 120 ? 0.012 : dist > 60 ? 0.018 : 0.025;
+    transitionSpeed = step > 40 ? 0.012 : step > 20 ? 0.018 : 0.025;
     currentHex = hex;
     setColor(hex, false);
     renderTime('time-hex', hex.toUpperCase(), '');
