@@ -83,6 +83,7 @@ export const scriptJs = `
       progress = 0.0;
     }
     document.title = hex;
+    document.documentElement.style.setProperty('--fallback-bg', hex);
     const r = parseInt(hex.substr(1,2),16), g = parseInt(hex.substr(3,2),16), b = parseInt(hex.substr(5,2),16);
     const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
     const textColor = lum > 0.5 ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.85)';
@@ -122,6 +123,28 @@ export const scriptJs = `
     const s = Math.max(60, Math.floor(75 - (l - 40) * 0.5 + Math.random() * 10));
     return { h, s, l: Math.floor(l), step };
   }
+
+  // ── Audio ──────────────────────────────────────────────
+  let audioCtx = null;
+  function playTone(hex) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const r = parseInt(hex.substr(1,2),16), g = parseInt(hex.substr(3,2),16), b = parseInt(hex.substr(5,2),16);
+      const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+      const freq = 220 + lum * 440; // 220~660Hz，亮色高音
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    } catch(e) {}
+  }
+
+  // ── Color count ────────────────────────────────────────
+  let colorCount = 0;
 
   async function sendColor(hex, src) {
     try {
@@ -187,8 +210,12 @@ export const scriptJs = `
     const hex = hslToHex(h, s, l);
     transitionSpeed = step > 40 ? 0.012 : step > 20 ? 0.018 : 0.025;
     currentHex = hex;
+    colorCount++;
     setColor(hex, false);
     renderTime('time-hex', hex.toUpperCase(), '');
+    const cc = document.getElementById('color-count');
+    if (cc) cc.textContent = '#' + String(colorCount).padStart(4, '0');
+    if (src !== 'i') playTone(hex);
     sendColor(hex, src);
   }
 

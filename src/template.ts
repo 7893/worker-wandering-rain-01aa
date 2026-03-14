@@ -21,7 +21,11 @@ export const pageTemplate = `<!DOCTYPE html>
 <body>
   <canvas id="gl-canvas"></canvas>
   <div class="overlay">
-    <div id="time-hex" class="time-display"></div>
+    <div class="hex-wrapper">
+      <div id="time-hex" class="time-display"></div>
+      <div id="color-count" class="color-count"></div>
+    </div>
+    <div class="time-divider"></div>
     <div id="time-utc" class="time-display"></div>
     <div id="time-utc8" class="time-display"></div>
   </div>

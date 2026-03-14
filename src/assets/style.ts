@@ -10,7 +10,7 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: transparent;
+  background-color: var(--fallback-bg, #1a1a1a);
   cursor: pointer;
   overflow: hidden;
   padding: 2em;
@@ -37,11 +37,18 @@ canvas#gl-canvas {
   animation: fadein 0.6s ease forwards;
 }
 
-#time-hex {
-  padding-bottom: 0.5em;
-  border-bottom: 1px solid var(--text);
+.hex-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.time-divider {
   width: 100%;
-  transition: border-color 0.8s ease;
+  height: 1px;
+  background: var(--text);
+  opacity: 0.3;
+  transition: background 0.8s ease;
+  margin: 0.1em 0 0.2em;
 }
 
 @keyframes fadein {
@@ -88,6 +95,21 @@ canvas#gl-canvas {
   letter-spacing: 0.15em;
   margin-left: 0.5em;
   align-self: center;
+}
+
+.color-count {
+  position: absolute;
+  top: -0.8em;
+  left: 100%;
+  margin-left: 0.3em;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.45em;
+  font-weight: 400;
+  color: var(--text);
+  opacity: 0.45;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 @keyframes flip-char {

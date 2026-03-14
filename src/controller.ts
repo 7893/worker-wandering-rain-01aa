@@ -43,17 +43,21 @@ export async function handleGetIndex(request: Request, env: DbEnv): Promise<Resp
 }
 
 export async function handleStaticAsset(pathname: string): Promise<Response> {
+    // 用内容 hash 做版本，防止部署后用户缓存旧文件
+    const styleHash = btoa(styleCss.slice(0, 32)).replace(/[^a-z0-9]/gi, '').slice(0, 8);
+    const scriptHash = btoa(scriptJs.slice(0, 32)).replace(/[^a-z0-9]/gi, '').slice(0, 8);
+
     const headers = {
-        'Cache-Control': 'public, max-age=86400, immutable', // 静态资源缓存 1 天
+        'Cache-Control': 'public, max-age=31536000, immutable',
         'X-Content-Type-Options': 'nosniff'
     };
 
-    if (pathname === '/assets/style.css') {
+    if (pathname === `/assets/style.${styleHash}.css` || pathname === '/assets/style.css') {
         return new Response(styleCss, {
             headers: { ...headers, 'Content-Type': 'text/css; charset=UTF-8' }
         });
     }
-    if (pathname === '/assets/script.js') {
+    if (pathname === `/assets/script.${scriptHash}.js` || pathname === '/assets/script.js') {
         return new Response(scriptJs, {
             headers: { ...headers, 'Content-Type': 'application/javascript; charset=UTF-8' }
         });
