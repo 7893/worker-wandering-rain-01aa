@@ -6,7 +6,12 @@ export interface Env {
     ORDS_API_PATH: string;
     DB_USER: string;
     DB_PASSWORD: string;
+    AE: AnalyticsEngineDataset;
+    CF_API_TOKEN: string;
 }
+
+export const AE_ACCOUNT_ID = 'ed3e4f0448b71302675f2b436e5e8dd3';
+export const AE_DATASET = 'wwr-ae';
 
 export interface ColorRecordForAutoRest {
     color: string;

@@ -28,6 +28,7 @@ export const pageTemplate = `<!DOCTYPE html>
     <div class="time-divider"></div>
     <div id="time-utc" class="time-display"></div>
     <div id="time-utc8" class="time-display"></div>
+    <div id="stats-panel" class="stats-panel"></div>
   </div>
 
   <script>

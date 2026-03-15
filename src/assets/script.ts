@@ -256,5 +256,34 @@ export const scriptJs = `
   document.addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); onTap(); } });
 
   setTimeout(() => sendColor(initialServerColor, 'i'), 100);
+
+  // ── Dwell time ─────────────────────────────────────────
+  const pageStart = Date.now();
+  window.addEventListener('beforeunload', () => {
+    const dwell = Math.round((Date.now() - pageStart) / 1000);
+    navigator.sendBeacon('/', JSON.stringify({ color: currentHex, trace_id: crypto.randomUUID(), source: 's', dwell }));
+  });
+
+  // ── Stats panel ────────────────────────────────────────
+  async function loadStats() {
+    try {
+      const res = await fetch('/stats');
+      const json = await res.json();
+      const rows = json.data || [];
+      let pv = 0, colors = 0;
+      const countries = {};
+      for (const r of rows) {
+        const cnt = parseInt(r.cnt);
+        if (r.event_type === 'pageview') pv += cnt;
+        if (r.event_type === 'color') colors += cnt;
+        if (r.country) countries[r.country] = (countries[r.country] || 0) + cnt;
+      }
+      const topCountry = Object.entries(countries).sort((a, b) => (b[1] as number) - (a[1] as number))[0];
+      const el = document.getElementById('stats-panel');
+      if (el) el.innerHTML = 'PV ' + pv + '  CLR ' + colors + (topCountry ? '  ' + topCountry[0] : '');
+    } catch(e) {}
+  }
+  loadStats();
+  setInterval(loadStats, 60000);
 })();
 `;

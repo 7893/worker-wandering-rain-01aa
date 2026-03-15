@@ -1,10 +1,9 @@
 /// <reference types="@cloudflare/workers-types" />
-import { insertColorRecord, Env as DbEnv, ColorRecordForAutoRest } from '../lib/db-utils';
+import { insertColorRecord, Env as DbEnv, ColorRecordForAutoRest, AE_ACCOUNT_ID, AE_DATASET } from '../lib/db-utils';
 import { generateRandomColorHex } from '../lib/color-utils';
 import { pageTemplate } from './template';
 import { styleCss } from './assets/style';
 import { scriptJs } from './assets/script';
-
 
 function securityHeaders(extra?: Record<string, string>): HeadersInit {
     const base: Record<string, string> = {
@@ -19,29 +18,53 @@ function securityHeaders(extra?: Record<string, string>): HeadersInit {
     return { ...(base as any), ...(extra || {}) };
 }
 
-function getCurrentUTCTime(): string {
-    return new Date().toISOString();
-}
-
+function getCurrentUTCTime(): string { return new Date().toISOString(); }
 const sh = (extras?: Record<string, string>) => securityHeaders(extras);
+
+function writeAE(env: DbEnv, event_type: string, color: string, source: string, country: string, colo: string, threat: number, trust: number, trace_id: string) {
+    env.AE.writeDataPoint({
+        blobs: [color, source, country, colo, event_type],
+        doubles: [threat, trust],
+        indexes: [trace_id],
+    });
+}
 
 export async function handleGetIndex(request: Request, env: DbEnv): Promise<Response> {
     const colorHex = generateRandomColorHex();
+    const cf = request.cf;
+    const country = (cf && typeof cf.country === 'string') ? cf.country : '';
+    const colo = (cf && typeof cf.colo === 'string') ? cf.colo : '';
+    // Record pageview
+    writeAE(env, 'pageview', colorHex, 'p', country, colo, 0, 0, crypto.randomUUID());
+
     const htmlContent = pageTemplate
         .replaceAll('__COLOR_HEX__', colorHex)
         .replaceAll('__COLOR_HEX_URL_ENCODED__', colorHex.replace('#', '%23'));
-
-    // HTML 自身不缓存，因为包含动态的初始颜色
     return new Response(htmlContent, {
         headers: sh({
             "Content-Type": "text/html; charset=UTF-8",
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-            "Pragma": "no-cache",
-            "Expires": "0"
+            "Pragma": "no-cache", "Expires": "0"
         })
     });
 }
 
+export async function handleGetStats(env: DbEnv): Promise<Response> {
+    const sql = `SELECT blob5 as event_type, blob3 as country, count() as cnt FROM '${AE_DATASET}' WHERE toDate(timestamp) = toDate(now()) GROUP BY blob5, blob3 ORDER BY cnt DESC LIMIT 50`;
+    try {
+        const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${AE_ACCOUNT_ID}/analytics_engine/sql`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${env.CF_API_TOKEN}`, 'Content-Type': 'text/plain' },
+            body: sql,
+        });
+        const data = await res.json() as any;
+        return new Response(JSON.stringify(data), {
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }
+        });
+    } catch (e) {
+        return new Response(JSON.stringify({ error: 'stats_unavailable' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+}
 export async function handleStaticAsset(pathname: string): Promise<Response> {
     // 用内容 hash 做版本，防止部署后用户缓存旧文件
     const styleHash = btoa(styleCss.slice(0, 32)).replace(/[^a-z0-9]/gi, '').slice(0, 8);
@@ -73,6 +96,7 @@ export async function handlePostColor(request: Request, env: DbEnv, ctx: Executi
     const minimumTrustScore = 10;
     if (cf && typeof cf.clientTrustScore === 'number' && cf.clientTrustScore < minimumTrustScore) {
         console.warn(`Blocking POST: Low trust score (${cf.clientTrustScore}) from ${clientIp}`);
+        writeAE(env, 'abuse', '', 'blocked', (cf as any).country ?? '', (cf as any).colo ?? '', (cf as any).threatScore ?? 0, cf.clientTrustScore, crypto.randomUUID());
         return new Response(JSON.stringify({ error: 'forbidden', reason: 'low_trust_score' }), {
             status: 403, headers: sh({ 'Content-Type': 'application/json' })
         });
@@ -136,9 +160,12 @@ export async function handlePostColor(request: Request, env: DbEnv, ctx: Executi
     };
 
     // 发送即忘记 (Fire and Forget) - 立即响应客户端
-    ctx.waitUntil(insertColorRecord(fullData, env).catch(err => {
-        console.error(`Async insert failed for trace ${coreData.trace_id}:`, err);
-    }));
+    ctx.waitUntil(Promise.all([
+        insertColorRecord(fullData, env).catch(err => {
+            console.error(`Async insert failed for trace ${coreData.trace_id}:`, err);
+        }),
+        Promise.resolve(writeAE(env, 'color', coreData.color, coreData.source, fullData.cf_country ?? '', fullData.cf_colo ?? '', fullData.cf_threat_score ?? 0, fullData.cf_trust_score ?? 0, coreData.trace_id)),
+    ]));
 
     return new Response(JSON.stringify({ status: 'ok' }), {
         status: 200, headers: sh({ 'Content-Type': 'application/json' })
@@ -178,6 +205,7 @@ export async function handleScheduled(event: ScheduledEvent, env: DbEnv, ctx: Ex
                 };
 
                 await insertColorRecord(data, env);
+                writeAE(env, 'cron', simulatedColor, 's', 'XX', 'SYSTEM', 0, 99, simulatedTraceId);
                 console.log(`Cron success: ${simulatedTraceId}`);
             } catch (err) {
                 console.error('Cron execution failed:', err);
