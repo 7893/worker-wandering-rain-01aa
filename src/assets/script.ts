@@ -1,4 +1,5 @@
 export const scriptJs = `
+/* v2 */
 (function () {
   const initialServerColor = window.INITIAL_COLOR || '#000000';
   let currentHex = initialServerColor;
