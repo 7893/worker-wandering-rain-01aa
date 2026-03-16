@@ -34,12 +34,15 @@ export async function handleGetIndex(request: Request, env: DbEnv): Promise<Resp
     const cf = request.cf;
     const country = (cf && typeof cf.country === 'string') ? cf.country : '';
     const colo = (cf && typeof cf.colo === 'string') ? cf.colo : '';
-    // Record pageview
     writeAE(env, 'pageview', colorHex, 'p', country, colo, 0, 0, crypto.randomUUID());
 
+    const styleHash = btoa(styleCss.slice(0, 32)).replace(/[^a-z0-9]/gi, '').slice(0, 8);
+    const scriptHash = btoa(scriptJs.slice(0, 32)).replace(/[^a-z0-9]/gi, '').slice(0, 8);
     const htmlContent = pageTemplate
         .replaceAll('__COLOR_HEX__', colorHex)
-        .replaceAll('__COLOR_HEX_URL_ENCODED__', colorHex.replace('#', '%23'));
+        .replaceAll('__COLOR_HEX_URL_ENCODED__', colorHex.replace('#', '%23'))
+        .replaceAll('__STYLE_URL__', `/assets/style.${styleHash}.css`)
+        .replaceAll('__SCRIPT_URL__', `/assets/script.${scriptHash}.js`);
     return new Response(htmlContent, {
         headers: sh({
             "Content-Type": "text/html; charset=UTF-8",
