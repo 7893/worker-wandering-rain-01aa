@@ -278,7 +278,7 @@ export const scriptJs = `
         if (r.event_type === 'color') colors += cnt;
         if (r.country) countries[r.country] = (countries[r.country] || 0) + cnt;
       }
-      const topCountry = Object.entries(countries).sort((a, b) => (b[1] as number) - (a[1] as number))[0];
+      const topCountry = Object.entries(countries).sort((a, b) => (b[1]) - (a[1]))[0];
       const el = document.getElementById('stats-panel');
       if (el) el.innerHTML = 'PV ' + pv + '  CLR ' + colors + (topCountry ? '  ' + topCountry[0] : '');
     } catch(e) {}
