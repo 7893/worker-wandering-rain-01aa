@@ -20,12 +20,11 @@ compatibility_date = "2026-03-01"
 enabled = false
 
 [vars]
-# 数据库连接配置应该使用 Secret，但为了方便部署暂时使用 vars
-# 生产环境建议使用: wrangler secret put ORDS_BASE_URL
-ORDS_BASE_URL = "https://w9cigs8ax3ponzm-ioftnbqu5k6zb6ea.adb.ap-tokyo-1.oraclecloudapps.com/ords"
-ORDS_SCHEMA_PATH = "admin"
+# ORDS 地址与应用用户可公开配置；数据库密码仅以 Worker Secret 保存。
+ORDS_BASE_URL = "https://ETJYVUVQXYN1SJP-ADB20260818.adb.us-ashburn-1.oraclecloudapps.com/ords"
+ORDS_SCHEMA_PATH = "wwr"
 ORDS_API_PATH = "colorevents"
-DB_USER = "ADMIN"
+DB_USER = "WWR_APP"
 
 [triggers]
 crons = ["0 */2 * * *"]  # 每 2 小时执行一次

@@ -94,9 +94,8 @@ export async function insertColorRecord(colorData: Partial<ColorRecordForAutoRes
 
             // Client errors (4xx) usually shouldn't be retried, except for Rate Limited (429)
             if (response.status >= 400 && response.status < 500 && response.status !== 429) {
-                const errorText = await response.text();
-                console.error(`AutoREST client error (no retry) ${response.status} for trace=${colorData.trace_id}: ${errorText}`);
-                throw new Error(`AutoREST client error: ${response.status} ${errorText}`);
+                console.error(`AutoREST client error (no retry): ${response.status}`);
+                throw new Error(`AutoREST client error: ${response.status}`);
             }
 
         } catch (fetchError: any) {
@@ -122,17 +121,8 @@ export async function insertColorRecord(colorData: Partial<ColorRecordForAutoRes
     if (!response || !response.ok) {
         const status = response ? response.status : 0;
         const statusText = response ? response.statusText : 'no response';
-        let errorBodyText = '[Could not retrieve error body text]';
-        try {
-            errorBodyText = response ? await response.text() : String(lastError || 'no response');
-        } catch (e) {
-            console.warn(`Could not get text from error response body for trace ${colorData.trace_id}`, e);
-        }
-        console.error(
-            `Failed to insert via AutoREST. Status: ${status} ${statusText}. Trace: ${colorData.trace_id}, URL: ${apiUrl}`,
-            { requestBodySent: requestBody, responseBodyText: errorBodyText }
-        );
-        throw new Error(`Failed to insert via AutoREST: ${status} ${statusText}. Response: ${errorBodyText}`);
+        console.error(`Failed to insert via AutoREST. Status: ${status} ${statusText}.`);
+        throw new Error(`Failed to insert via AutoREST: ${status} ${statusText}`);
     } else {
         console.log(`AutoREST POST success for trace_id: ${colorData.trace_id}. Status: ${response.status}`);
         // const responseData = await response.json();
