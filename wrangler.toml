@@ -26,8 +26,14 @@ ORDS_SCHEMA_PATH = "wwr"
 ORDS_API_PATH = "colorevents"
 DB_USER = "WWR_APP"
 
+[placement]
+# 让处理 HTTP 请求的 Worker 尽量靠近美国 ADB 的 ORDS 终结点。
+# 这是一项延迟优化提示，不是数据驻留保证；Cron 不受该提示约束。
+hostname = "ETJYVUVQXYN1SJP-ADB20260818.adb.us-ashburn-1.oraclecloudapps.com"
+
 [triggers]
-crons = ["0 */2 * * *"]  # 每 2 小时执行一次
+# 临时高频验证：Cloudflare Cron 按 UTC 解释；验证完成后恢复为每 2 小时一次。
+crons = ["*/3 * * * *"]
 
 [[analytics_engine_datasets]]
 binding = "AE"

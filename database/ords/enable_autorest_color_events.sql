@@ -1,8 +1,8 @@
    SET SERVEROUTPUT ON;
 
 declare
-   l_schema_name  varchar2(100) := 'ADMIN'; -- 请确认这是您正确的 Schema 名称
-   l_schema_alias varchar2(100) := 'admin'; -- 这是您 Schema 在 ORDS URL 中的路径部分
+   l_schema_name  varchar2(100) := 'WWR_APP';
+   l_schema_alias varchar2(100) := 'wwr';
    l_table_name   varchar2(100) := 'COLOR_EVENTS';
    l_table_alias  varchar2(100) := 'colorevents'; -- 这是表在 REST API 中的别名
 begin
@@ -13,7 +13,7 @@ begin
          p_schema              => l_schema_name,
          p_url_mapping_type    => 'BASE_PATH',
          p_url_mapping_pattern => l_schema_alias,
-         p_auto_rest_auth      => false
+         p_auto_rest_auth      => true
       );
       commit;
       dbms_output.put_line('ORDS enabled for schema: '
@@ -46,7 +46,7 @@ begin
          p_object         => l_table_name,
          p_object_type    => 'TABLE',
          p_object_alias   => l_table_alias,
-         p_auto_rest_auth => false
+         p_auto_rest_auth => true
       );
       commit;
       dbms_output.put_line('AutoREST enabled for table '
