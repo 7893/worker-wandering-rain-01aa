@@ -32,8 +32,8 @@ DB_USER = "WWR_APP"
 hostname = "ETJYVUVQXYN1SJP-ADB20260818.adb.us-ashburn-1.oraclecloudapps.com"
 
 [triggers]
-# 临时高频验证：Cloudflare Cron 按 UTC 解释；验证完成后恢复为每 2 小时一次。
-crons = ["*/3 * * * *"]
+# Cloudflare Cron 按 UTC 解释，每 6 小时执行一次保活
+crons = ["0 */6 * * *"]
 
 [[analytics_engine_datasets]]
 binding = "AE"
