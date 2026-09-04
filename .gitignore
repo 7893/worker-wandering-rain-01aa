@@ -35,3 +35,6 @@ temp/
 
 # history files
 history.log
+
+# Cloudflare local secrets
+.dev.vars

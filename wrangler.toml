@@ -21,7 +21,7 @@ enabled = false
 
 [vars]
 # ORDS 地址与应用用户可公开配置；数据库密码仅以 Worker Secret 保存。
-ORDS_BASE_URL = "https://ETJYVUVQXYN1SJP-ADB20260818.adb.us-ashburn-1.oraclecloudapps.com/ords"
+ORDS_BASE_URL = "https://G29F77F992EEE40-DB534404.adb.ap-osaka-1.oraclecloudapps.com/ords"
 ORDS_SCHEMA_PATH = "wwr"
 ORDS_API_PATH = "colorevents"
 DB_USER = "WWR_APP"
@@ -29,7 +29,7 @@ DB_USER = "WWR_APP"
 [placement]
 # 让处理 HTTP 请求的 Worker 尽量靠近美国 ADB 的 ORDS 终结点。
 # 这是一项延迟优化提示，不是数据驻留保证；Cron 不受该提示约束。
-hostname = "ETJYVUVQXYN1SJP-ADB20260818.adb.us-ashburn-1.oraclecloudapps.com"
+hostname = "G29F77F992EEE40-DB534404.adb.ap-osaka-1.oraclecloudapps.com"
 
 [triggers]
 # Cloudflare Cron 按 UTC 解释，每 6 小时执行一次保活
