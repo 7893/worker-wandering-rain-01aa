@@ -1,0 +1,7 @@
+# Optional, for extensions that explicitly connect the reference Oracle helper.
+# The current clock/color page does not use these variables.
+ORDS_BASE_URL=https://your-ords-endpoint.example/ords
+ORDS_SCHEMA_PATH=wwr
+ORDS_API_PATH=colorevents
+DB_USER=your-ords-user
+DB_PASSWORD=
