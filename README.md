@@ -14,7 +14,7 @@ MIT
 
 ## Local development
 
-Use Node.js 24.18.1 or newer and pnpm 11.19.0, as declared in `package.json`:
+Use Node.js 26.10.0 and pnpm 12.6.0, as declared in `package.json`:
 
 ```sh
 git clone https://github.com/7893/worker-wandering-rain-01aa.git
