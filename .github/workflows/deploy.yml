@@ -1,10 +1,9 @@
 name: Deploy Worker
 
 on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
+  push:
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,9 +11,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: production
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:

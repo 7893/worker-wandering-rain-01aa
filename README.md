@@ -64,7 +64,7 @@ pnpm exec wrangler deploy --dry-run
 
 Public CI runs these checks without cloud secrets. To deploy, choose your own
 Worker `name` in `wrangler.toml`, authenticate to your own Cloudflare account and
-run `pnpm deploy`. The GitHub deployment workflow is manual on `main`; it requires
+run `pnpm deploy`. The original GitHub deployment workflow runs on pushes to `main`; it requires
 your `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Ordinary pushes do not deploy.
 
 Last updated: September 26, 2026.
