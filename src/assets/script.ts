@@ -1,88 +1,17 @@
+import { rendererJs } from './renderer';
+
 export const scriptJs = `
 /* v2 */
 (function () {
   const initialServerColor = window.INITIAL_COLOR || '#000000';
-  let currentHex = initialServerColor;
 
-  // ── WebGL ──────────────────────────────────────────────
-  const canvas = document.getElementById('gl-canvas');
-  const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, powerPreference: 'high-performance' })
-           || canvas.getContext('webgl',  { alpha: false, antialias: false, powerPreference: 'high-performance' });
-
-  let program = null, uOldColor = null, uNewColor = null, uProgress = null;
-  const currentColor = [0, 0, 0], targetColor = [0, 0, 0];
-  let progress = 1.0, animFrame = 0, isRendering = false;
-
-  function hex2rgb(hex) {
-    const h = hex.replace('#', '');
-    return [parseInt(h.substr(0,2),16)/255, parseInt(h.substr(2,2),16)/255, parseInt(h.substr(4,2),16)/255];
-  }
-
-  function initGL() {
-    if (!gl) return false;
-    const vs = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vs, 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}');
-    gl.compileShader(vs);
-    const fs = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fs, 'precision mediump float;uniform vec3 uOld;uniform vec3 uNew;uniform float uProg;void main(){gl_FragColor=vec4(mix(uOld,uNew,uProg),1.);}');
-    gl.compileShader(fs);
-    program = gl.createProgram();
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) { console.error('GL link failed'); return false; }
-    gl.useProgram(program);
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
-    const pos = gl.getAttribLocation(program, 'p');
-    gl.enableVertexAttribArray(pos);
-    gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
-    uOldColor = gl.getUniformLocation(program, 'uOld');
-    uNewColor = gl.getUniformLocation(program, 'uNew');
-    uProgress = gl.getUniformLocation(program, 'uProg');
-    return true;
-  }
-
-  function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = window.innerWidth * dpr;
-    canvas.height = window.innerHeight * dpr;
-    if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
-  }
-
+  ${rendererJs}
+  const background = createColorRenderer(document.getElementById('gl-canvas'));
   let transitionSpeed = 0.018;
-
-  function render() {
-    if (!gl || !program) return;
-    if (progress < 1.0) progress = Math.min(progress + transitionSpeed, 1.0);
-    const e = progress < 0.5 ? 2*progress*progress : -1+(4-2*progress)*progress;
-    gl.uniform3fv(uOldColor, currentColor);
-    gl.uniform3fv(uNewColor, targetColor);
-    gl.uniform1f(uProgress, e);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    animFrame = requestAnimationFrame(render);
-  }
-
-  function startRendering() { if (!isRendering) { isRendering = true; render(); } }
-  function stopRendering()  { if (isRendering)  { isRendering = false; cancelAnimationFrame(animFrame); } }
-
-  document.addEventListener('visibilitychange', () => document.hidden ? stopRendering() : startRendering());
 
   // ── Color ──────────────────────────────────────────────
   function setColor(hex, immediate) {
-    const rgb = hex2rgb(hex);
-    if (immediate) {
-      currentColor[0] = targetColor[0] = rgb[0];
-      currentColor[1] = targetColor[1] = rgb[1];
-      currentColor[2] = targetColor[2] = rgb[2];
-      progress = 1.0;
-    } else {
-      currentColor[0] = targetColor[0]; currentColor[1] = targetColor[1]; currentColor[2] = targetColor[2];
-      targetColor[0] = rgb[0]; targetColor[1] = rgb[1]; targetColor[2] = rgb[2];
-      progress = 0.0;
-    }
+    background.setColor(hex, immediate, transitionSpeed);
     document.title = hex;
     document.documentElement.style.setProperty('--fallback-bg', hex);
     const r = parseInt(hex.substr(1,2),16), g = parseInt(hex.substr(3,2),16), b = parseInt(hex.substr(5,2),16);
@@ -147,13 +76,6 @@ export const scriptJs = `
   // ── Color count ────────────────────────────────────────
   let colorCount = 0;
 
-  async function sendColor(hex, src) {
-    try {
-      await fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ color: hex, trace_id: crypto.randomUUID(), source: src }) });
-    } catch (e) { console.error('Send failed:', e); }
-  }
-
   // ── Flip display ───────────────────────────────────────
   function buildRow(el, chars, suffix) {
     el.innerHTML = '';
@@ -210,27 +132,17 @@ export const scriptJs = `
     const { h, s, l, step } = randomHSL();
     const hex = hslToHex(h, s, l);
     transitionSpeed = step > 40 ? 0.012 : step > 20 ? 0.018 : 0.025;
-    currentHex = hex;
     colorCount++;
     setColor(hex, false);
     renderTime('time-hex', hex.toUpperCase(), '');
     const cc = document.getElementById('color-count');
     if (cc) cc.textContent = '#' + String(colorCount).padStart(4, '0');
     if (src !== 'i') playTone(hex);
-    sendColor(hex, src);
   }
 
   // ── Init ───────────────────────────────────────────────
   setColor(initialServerColor, true);
   renderTime('time-hex', initialServerColor.toUpperCase(), '');
-
-  if (initGL()) {
-    resize();
-    window.addEventListener('resize', resize);
-    startRendering();
-  } else {
-    canvas.style.display = 'none';
-  }
 
   updateTime();
   setInterval(updateTime, 1000);
@@ -256,35 +168,5 @@ export const scriptJs = `
   document.body.addEventListener('touchend', (e) => { e.preventDefault(); onTap(); }, { passive: false });
   document.addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); onTap(); } });
 
-  setTimeout(() => sendColor(initialServerColor, 'i'), 100);
-
-  // ── Dwell time ─────────────────────────────────────────
-  const pageStart = Date.now();
-  window.addEventListener('beforeunload', () => {
-    const dwell = Math.round((Date.now() - pageStart) / 1000);
-    navigator.sendBeacon('/', JSON.stringify({ color: currentHex, trace_id: crypto.randomUUID(), source: 's', dwell }));
-  });
-
-  // ── Stats panel ────────────────────────────────────────
-  async function loadStats() {
-    try {
-      const res = await fetch('/stats');
-      const json = await res.json();
-      const rows = json.data || [];
-      let pv = 0, colors = 0;
-      const countries = {};
-      for (const r of rows) {
-        const cnt = parseInt(r.cnt);
-        if (r.event_type === 'pageview') pv += cnt;
-        if (r.event_type === 'color') colors += cnt;
-        if (r.country) countries[r.country] = (countries[r.country] || 0) + cnt;
-      }
-      const topCountry = Object.entries(countries).sort((a, b) => (b[1]) - (a[1]))[0];
-      const el = document.getElementById('stats-panel');
-      if (el) el.innerHTML = 'PV ' + pv + '  CLR ' + colors + (topCountry ? '  ' + topCountry[0] : '');
-    } catch(e) {}
-  }
-  loadStats();
-  setInterval(loadStats, 60000);
 })();
 `;

@@ -97,14 +97,14 @@ canvas#gl-canvas {
   align-self: center;
 }
 
-.stats-panel {
+.overlay::after {
+  content: "";
   font-family: 'Orbitron', monospace;
   font-size: clamp(0.55rem, 1.2vw, 0.75rem);
   color: var(--text);
   opacity: 0.5;
   letter-spacing: 0.1em;
   margin-top: 0.4em;
-  text-align: center;
   min-height: 1em;
 }
 

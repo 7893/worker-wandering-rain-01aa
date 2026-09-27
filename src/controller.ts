@@ -1,8 +1,13 @@
 /// <reference types="@cloudflare/workers-types" />
-import { generateRandomColorHex } from '../lib/color-utils';
+import { generateRandomColorHex } from './color-utils';
 import { pageTemplate } from './template';
 import { styleCss } from './assets/style';
 import { scriptJs } from './assets/script';
+
+async function contentHash(content: string): Promise<string> {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(content));
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 20);
+}
 
 function securityHeaders(extra?: Record<string, string>): HeadersInit {
     const base: Record<string, string> = {
@@ -14,16 +19,15 @@ function securityHeaders(extra?: Record<string, string>): HeadersInit {
         'X-Robots-Tag': 'noindex, nofollow',
         'Permissions-Policy': 'geolocation=(), microphone=(), camera=()'
     };
-    return { ...(base as any), ...(extra || {}) };
+    return { ...base, ...(extra || {}) };
 }
 
 const sh = (extras?: Record<string, string>) => securityHeaders(extras);
 
-export async function handleGetIndex(request: Request): Promise<Response> {
+export async function handleGetIndex(): Promise<Response> {
     const colorHex = generateRandomColorHex();
 
-    const styleHash = btoa(styleCss.slice(0, 32)).replace(/[^a-z0-9]/gi, '').slice(0, 8);
-    const scriptHash = btoa(scriptJs.slice(0, 32)).replace(/[^a-z0-9]/gi, '').slice(0, 8);
+    const [styleHash, scriptHash] = await Promise.all([contentHash(styleCss), contentHash(scriptJs)]);
     const htmlContent = pageTemplate
         .replaceAll('__COLOR_HEX__', colorHex)
         .replaceAll('__COLOR_HEX_URL_ENCODED__', colorHex.replace('#', '%23'))
@@ -40,11 +44,11 @@ export async function handleGetIndex(request: Request): Promise<Response> {
 }
 
 export async function handleStaticAsset(pathname: string): Promise<Response> {
-    const styleHash = btoa(styleCss.slice(0, 32)).replace(/[^a-z0-9]/gi, '').slice(0, 8);
-    const scriptHash = btoa(scriptJs.slice(0, 32)).replace(/[^a-z0-9]/gi, '').slice(0, 8);
+    const [styleHash, scriptHash] = await Promise.all([contentHash(styleCss), contentHash(scriptJs)]);
 
     const headers = {
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': pathname === '/assets/style.css' || pathname === '/assets/script.js'
+            ? 'no-cache' : 'public, max-age=31536000, immutable',
         'X-Content-Type-Options': 'nosniff'
     };
 

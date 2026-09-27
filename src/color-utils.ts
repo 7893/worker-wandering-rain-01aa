@@ -28,4 +28,3 @@ export function generateRandomColorHex(): string {
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-// Redundant generateTraceId function has been removed.
