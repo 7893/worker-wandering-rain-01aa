@@ -1,11 +1,12 @@
-export const rendererJs = `
-function createColorRenderer(canvas) {
-  const gl = canvas.getContext('webgl', { alpha: false, antialias: false, powerPreference: 'high-performance' });
-  const currentColor = [0, 0, 0], targetColor = [0, 0, 0];
-  let program, buffer, uOld, uNew, uProgress;
-  let progress = 1, duration = 1000 / (60 * .018), previous = 0, frame = 0, lost = false;
+import { vertexShader, fragmentShader } from "./shaders";
 
-  function dispose() {
+export const rendererJs = `
+function createLight(canvas, warm) {
+  const gl = canvas.getContext('webgl', { alpha: false, antialias: false });
+  let program = null, buffer = null, uniforms;
+  let frame = 0, paused = true, lost = false, previous = 0, elapsed = 0, hour = 12;
+  let width = 1, height = 1;
+  function release() {
     if (program) gl.deleteProgram(program);
     if (buffer) gl.deleteBuffer(buffer);
     program = buffer = null;
@@ -15,88 +16,88 @@ function createColorRenderer(canvas) {
     const shaders = [];
     try {
       program = gl.createProgram();
-      for (const [type, source] of [
-        [gl.VERTEX_SHADER, 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}'],
-        [gl.FRAGMENT_SHADER, 'precision mediump float;uniform vec3 uOld;uniform vec3 uNew;uniform float uProg;void main(){gl_FragColor=vec4(mix(uOld,uNew,uProg),1.);}']
-      ]) {
-        const shader = gl.createShader(type);
+      const high = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT).precision > 0;
+      for (const [kind, source] of [[gl.VERTEX_SHADER, ${JSON.stringify(vertexShader)}], [gl.FRAGMENT_SHADER, ${JSON.stringify(fragmentShader)}.replace('precision highp float;', high ? 'precision highp float;' : 'precision mediump float;')]]) {
+        const shader = gl.createShader(kind);
         shaders.push(shader);
         gl.shaderSource(shader, source);
         gl.compileShader(shader);
         gl.attachShader(program, shader);
       }
       gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw Error('Color shader unavailable');
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw Error('Light rendering unavailable');
       gl.useProgram(program);
       buffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
-      const position = gl.getAttribLocation(program, 'p');
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,3,-1,-1,3]), gl.STATIC_DRAW);
+      const position = gl.getAttribLocation(program, 'a_position');
       gl.enableVertexAttribArray(position);
       gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-      uOld = gl.getUniformLocation(program, 'uOld');
-      uNew = gl.getUniformLocation(program, 'uNew');
-      uProgress = gl.getUniformLocation(program, 'uProg');
-      // A uniform color needs only one pixel; CSS fills the viewport exactly.
-      canvas.width = canvas.height = 1;
-      gl.viewport(0, 0, 1, 1);
-      canvas.style.display = '';
+      uniforms = Object.fromEntries(['u_size','u_time','u_hour','u_warm'].map(name => [name, gl.getUniformLocation(program, name)]));
+      canvas.hidden = false;
+      canvas.dataset.renderer = 'webgl';
       return true;
-    } catch {
-      dispose();
+    } catch (error) {
+      release();
+      canvas.hidden = true;
+      canvas.dataset.renderer = 'css';
       return false;
     } finally {
       for (const shader of shaders) gl.deleteShader(shader);
     }
   }
-  function render(now) {
-    frame = 0;
-    if (!program || lost || document.hidden) return;
-    if (previous) progress = Math.min(1, progress + (now - previous) / duration);
-    previous = now;
-    const eased = progress < .5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-    gl.uniform3fv(uOld, currentColor);
-    gl.uniform3fv(uNew, targetColor);
-    gl.uniform1f(uProgress, eased);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    if (progress < 1) frame = requestAnimationFrame(render);
+  function draw() {
+    if (!program || lost) return;
+    gl.uniform2f(uniforms.u_size, canvas.width, canvas.height);
+    gl.uniform1f(uniforms.u_time, elapsed);
+    gl.uniform1f(uniforms.u_hour, hour);
+    gl.uniform1f(uniforms.u_warm, warm);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
-  function start() {
-    if (!frame && program && !lost && !document.hidden) {
-      previous = 0;
-      frame = requestAnimationFrame(render);
+  function resize() {
+    if (!program || lost) return;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    width = rect.width; height = rect.height;
+    const dpr = Math.min(devicePixelRatio || 1, 1.75, Math.sqrt(900000 / Math.max(1, width * height)));
+    canvas.width = Math.max(1, Math.round(width * dpr));
+    canvas.height = Math.max(1, Math.round(height * dpr));
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    draw();
+  }
+  function tick(now) {
+    frame = 0;
+    if (paused || lost || !program || document.hidden) return;
+    if (!previous || now - previous >= 32) {
+      if (previous) elapsed += Math.min((now - previous) / 1000, .1);
+      previous = now;
+      draw();
     }
+    frame = requestAnimationFrame(tick);
   }
-  function stop() {
+  function sync() {
     cancelAnimationFrame(frame);
-    frame = 0;
-    previous = 0;
+    frame = 0; previous = 0;
+    if (!paused && !lost && program && !document.hidden) frame = requestAnimationFrame(tick);
   }
-  document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
   canvas.addEventListener('webglcontextlost', event => {
-    event.preventDefault();
-    lost = true;
-    stop();
-    canvas.style.display = 'none';
+    event.preventDefault(); lost = true; canvas.hidden = true; canvas.dataset.renderer = 'lost'; sync();
   });
   canvas.addEventListener('webglcontextrestored', () => {
     lost = false;
-    if (initialize()) start();
-    else canvas.style.display = 'none';
+    if (initialize()) { resize(); sync(); }
   });
-  if (!initialize()) canvas.style.display = 'none';
+  document.addEventListener('visibilitychange', sync);
+  const available = initialize();
+  if (available) {
+    resize();
+    new ResizeObserver(resize).observe(canvas.parentElement);
+  } else {
+    canvas.hidden = true; canvas.dataset.renderer = 'css';
+  }
   return {
-    setColor(hex, immediate, speed) {
-      const rgb = [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16) / 255);
-      for (let i = 0; i < 3; i++) {
-        currentColor[i] = immediate ? rgb[i] : targetColor[i];
-        targetColor[i] = rgb[i];
-      }
-      duration = 1000 / (60 * speed);
-      progress = immediate ? 1 : 0;
-      previous = 0;
-      start();
-    }
+    available,
+    setHour(value) { hour = value; if (paused) draw(); },
+    setPaused(value) { paused = value; sync(); draw(); },
   };
 }
 `;

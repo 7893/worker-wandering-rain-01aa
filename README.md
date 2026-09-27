@@ -1,3 +1,3 @@
 # Wandering Rain
 
-A quiet rhythm of changing colors, gentle tones, and passing time.
+One moment, two places. A quiet gallery of time and light.
