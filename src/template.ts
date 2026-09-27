@@ -14,7 +14,7 @@ export const pageTemplate = `<!DOCTYPE html>
     href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22__COLOR_HEX_URL_ENCODED__%22/></svg>">
   <style>
     /* 极简的关键路径样式，避免 FOUC (Flash of Unstyled Content) */
-    body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2em; box-sizing: border-box; background-color: __COLOR_HEX__; }
+    body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2em; box-sizing: border-box; background-color: var(--fallback-bg, __COLOR_HEX__); }
   </style>
 </head>
 
