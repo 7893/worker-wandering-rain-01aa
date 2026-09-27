@@ -7,44 +7,36 @@ export const fragmentShader = `
 precision highp float;
 varying vec2 v_uv;
 uniform vec2 u_size;
-uniform float u_time;
-uniform float u_hour;
-uniform float u_warm;
-float arch(vec2 p){
-  float cap=length(vec2(p.x,min(p.y+.09,0.)))-.245;
-  return max(cap,p.y-.29);
-}
+uniform vec2 u_paper;
+uniform float u_feed;
 void main(){
-  vec2 uv=vec2(v_uv.x,1.-v_uv.y);
-  vec2 p=(uv-.5)*vec2(u_size.x/u_size.y,1.);
-  p.y+=.025;
-  float daylight=.5+.5*sin((u_hour-6.)*.261799);
-  vec3 base=mix(vec3(.80,.83,.75),vec3(.87,.77,.67),u_warm);
-  vec3 light=mix(vec3(.95,.97,.86),vec3(1.,.92,.78),u_warm);
-  vec3 shade=mix(vec3(.44,.51,.38),vec3(.61,.41,.27),u_warm);
-  float breathing=sin(u_time*.12+u_warm*2.)*.012;
-  vec2 shifted=p-vec2(sin(u_time*.045)*.007,0.);
-  float d=arch(shifted);
-  float soft=max(1.25/u_size.y,.0015);
-  float inside=1.-smoothstep(-soft,soft,d);
-  float pool=exp(-dot(p*vec2(2.5,1.2),p*vec2(2.5,1.2))*2.);
-  vec3 color=base+light*pool*.05;
-  // A recessed arch, softly lit from above; all light is analytic.
-  float recess=exp(-max(-d,0.)*24.)*.085;
-  float topLight=exp(-length((p-vec2(-.035,-.23))*vec2(3.4,2.3))*1.5);
-  vec3 interior=mix(base,light,.14+topLight*(.5+daylight*.12)+breathing);
-  interior-=shade*recess;
-  color=mix(color,interior,inside);
-  float edge=exp(-abs(d)*230.)*.13;
-  color+=light*edge*(.4+.6*(1.-smoothstep(-.3,.1,p.x+p.y)));
-  float shadow=exp(-abs(arch(p-vec2(.012,.016)))*65.)*(1.-inside);
-  color-=shade*shadow*.10;
-  // A broad reflected glow at the foot of the opening.
-  float reflected=exp(-pow(p.y-.30,2.)*2400.-p.x*p.x*25.);
-  color+=light*reflected*.095;
-  float grain=fract(sin(dot(mod(gl_FragCoord.xy,128.),vec2(12.9898,78.233)))*437.585);
-  color+=(grain-.5)*.008;
-  color-=vec3(.035)*smoothstep(.32,.85,length(p));
+  vec2 p=vec2(v_uv.x,1.-v_uv.y)*u_size;
+  float y=(p.y-u_paper.x)/u_paper.y;
+  float grain=fract(sin(dot(mod(gl_FragCoord.xy,128.),vec2(12.9898,78.233)))*437.585)-.5;
+  vec3 metal=vec3(.132,.157,.117);
+  metal+=vec3(.04)*exp(-pow((v_uv.y-.5)*2.,2.));
+  metal+=vec3(grain*.007);
+  float edgeShadow=exp(-max(p.y-u_paper.x-u_paper.y,0.)/13.)*.045;
+  if(y>1.)metal-=vec3(edgeShadow);
+  vec3 color=metal;
+  if(y>=0.&&y<=1.){
+    vec3 paper=vec3(.85,.84,.73);
+    // Cylindrical bends at the feed rollers and a shallow transverse curl.
+    float roll=exp(-p.x/18.)+exp(-(u_size.x-p.x)/18.);
+    float fold=exp(-y*42.)*.21+exp(-(1.-y)*25.)*.10;
+    float sheen=exp(-pow((y-.045)*35.,2.))*.035;
+    paper*=1.-roll*.22-fold;
+    paper+=vec3(sheen);
+    float fibers=sin(p.y*2.9+sin((p.x+u_feed)*.06))*.0015;
+    paper+=vec3(grain*.012+fibers);
+    float tooth=abs(mod(p.x+u_feed,22.)-11.);
+    float hole=min(abs(p.y-u_paper.x-14.),abs(p.y-u_paper.x-u_paper.y+13.));
+    float holeDistance=length(vec2(max(tooth-1.8,0.),max(hole-1.8,0.)))-1.3;
+    float aperture=1.-smoothstep(-.6,.6,holeDistance);
+    paper=mix(paper,metal*.65,aperture);
+    paper+=vec3(.08)*exp(-abs(holeDistance-1.)*2.)*(1.-aperture);
+    color=paper;
+  }
   gl_FragColor=vec4(color,1.);
 }
 `;

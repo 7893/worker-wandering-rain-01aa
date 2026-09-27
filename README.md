@@ -1,3 +1,3 @@
 # Wandering Rain
 
-One moment, two places. A quiet gallery of time and light.
+Time, in print. Two places read from one passing moment.

@@ -41,21 +41,11 @@ export async function handleGetIndex(): Promise<Response> {
     year: "numeric",
   });
   const time = (value: Date) => value.toISOString().slice(11, 16);
-  const progress = (value: Date) =>
-    String(
-      (value.getUTCHours() * 3600 +
-        value.getUTCMinutes() * 60 +
-        value.getUTCSeconds()) /
-        864,
-    );
-
   const [styleHash, scriptHash] = await Promise.all([
     contentHash(styleCss),
     contentHash(scriptJs),
   ]);
   const htmlContent = pageTemplate
-    .replaceAll("__UTC_PROGRESS__", progress(now))
-    .replaceAll("__HKT_PROGRESS__", progress(hkt))
     .replaceAll("__UTC_TIME__", time(now))
     .replaceAll("__HKT_TIME__", time(hkt))
     .replaceAll("__UTC_DATE__", date.format(now))
